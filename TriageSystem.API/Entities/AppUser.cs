@@ -7,11 +7,14 @@ namespace TriageSystem.API.Entities
     public class AppUser :IdentityUser
     {
         [Required]
-        public string Fname { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
         [Required]
-        public string Lname { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
         public DateOnly DateOfBirth { get; set; }
         public BiologicalSex Sex { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [MaxLength(100)]
+        public string? Specialization { get; set; }
     }
 }

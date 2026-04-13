@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TriageSystem.API.Data;
 
@@ -11,9 +12,11 @@ using TriageSystem.API.Data;
 namespace TriageSystem.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260407081521_AddSpecializationToUser")]
+    partial class AddSpecializationToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -179,11 +182,11 @@ namespace TriageSystem.API.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("FirstName")
+                    b.Property<string>("Fname")
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("LastName")
+                    b.Property<string>("Lname")
                         .IsRequired()
                         .HasColumnType("longtext");
 
