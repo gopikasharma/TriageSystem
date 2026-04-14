@@ -5,7 +5,7 @@ using TriageSystem.API.Shared;
 
 namespace TriageSystem.API.DTOs;
 
-public class DoctorRegisterDto
+public class StaffRegisterDto
 {
     [Required]
     [EmailAddress]
@@ -25,5 +25,7 @@ public class DoctorRegisterDto
     public BiologicalSex Sex {get; set;}
     [Required]
     [MaxLength(100)]
-    public required string Specialization { get; set; }
+    public string? Specialization { get; set; }
+    [Required] 
+    public required string Role { get; set; }
 }

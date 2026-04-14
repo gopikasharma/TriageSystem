@@ -10,27 +10,17 @@ namespace TriageSystem.API.Controllers
     public class AccountController : BaseApiController
     {
         private readonly UserManager<AppUser> _userManager;
-        private readonly RoleManager<AppRole> _roleManager;
         private readonly ITokenService _tokenService;
-
-        // FIX 1: ITokenService added to the constructor here
-        public AccountController(UserManager<AppUser> userManager, RoleManager<AppRole> roleManager, ITokenService tokenService)
+        public AccountController(UserManager<AppUser> userManager, ITokenService tokenService)
         {
             _userManager = userManager;
-            _roleManager = roleManager;
             _tokenService = tokenService;
         }
         
         [HttpPost("register-patient")]
         public async Task<IActionResult> RegisterPatient([FromBody] UserRegisterDto registerDto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var userExists = await _userManager.FindByEmailAsync(registerDto.Email);
-            if (userExists != null)
+            if (await _userManager.FindByEmailAsync(registerDto.Email) != null)
             {
                 return BadRequest(new { Message = "Email is already registered." });
             }
@@ -46,36 +36,31 @@ namespace TriageSystem.API.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, registerDto.Password);
-
-            if (!result.Succeeded)
-            {
-                var errors = result.Errors.Select(e => e.Description);
-                return BadRequest(new { Errors = errors });
-            }
-            var roleExists = await _roleManager.RoleExistsAsync("Patient");
-            if (!roleExists)
-            {
-                await _roleManager.CreateAsync(new AppRole { Name = "Patient" });
-            }
+            if (!result.Succeeded) return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
 
             await _userManager.AddToRoleAsync(user, "Patient");
 
             return Ok(new { Message = "Patient registered successfully." });
         }
 
-        [HttpPost("register-doctor")]
-        [Authorize(Roles ="Admin")]
-        public async Task<IActionResult>RegisterDoctor([FromBody]DoctorRegisterDto registerDto)
+        [HttpPost("register-staff")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RegisterStaff([FromBody] StaffRegisterDto registerDto)
         {
-            if (!ModelState.IsValid)
+            // Fixed: "Reception" changed to "Receptionist" to match DbInitializer
+            var allowedRoles = new[] { "Doctor", "Nurse", "Receptionist", "Reviewer" };
+            
+            var targetRole = allowedRoles.FirstOrDefault(r => r.Equals(registerDto.Role, StringComparison.OrdinalIgnoreCase));
+            if (targetRole == null)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new { Message = $"Invalid role. Allowed roles are: {string.Join(", ", allowedRoles)}" });
             }
-            var userExists = await _userManager.FindByEmailAsync(registerDto.Email);
-            if (userExists != null)
+
+            if (await _userManager.FindByEmailAsync(registerDto.Email) != null)
             {
                 return BadRequest(new { Message = "Email is already registered." });
             }
+
             var user = new AppUser
             {
                 UserName = registerDto.Email,
@@ -84,35 +69,22 @@ namespace TriageSystem.API.Controllers
                 LastName = registerDto.LastName,
                 PhoneNumber = registerDto.PhoneNumber,
                 Sex = registerDto.Sex,
-                Specialization = registerDto.Specialization
+                Specialization = registerDto.Specialization 
             };
+
             var result = await _userManager.CreateAsync(user, registerDto.Password);
-            if (!result.Succeeded)
-            {
-                var errors = result.Errors.Select(e => e.Description);
-                return BadRequest(new { Errors = errors });
-            }
-            var roleExists = await _roleManager.RoleExistsAsync("Doctor");
-            if (!roleExists)
-            {
-                await _roleManager.CreateAsync(new AppRole { Name = "Doctor" });
-            }
+            if (!result.Succeeded) return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
 
-            await _userManager.AddToRoleAsync(user, "Doctor");
+            await _userManager.AddToRoleAsync(user, targetRole);
 
-            return Ok(new { Message = "Doctor registered successfully." });
-            
+            return Ok(new { Message = $"{targetRole} registered successfully." });
         }
 
         [HttpPost("login")]
-        public async Task <IActionResult>Login([FromBody] LoginDto loginDto)
+        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             var user = await _userManager.FindByEmailAsync(loginDto.Email);
 
-            // FIX 2: Replaced _signInManager with _userManager.CheckPasswordAsync
             if (user == null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
             {
                 return Unauthorized(new { Message = "Invalid email or password." });
