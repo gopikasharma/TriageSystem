@@ -16,36 +16,10 @@ namespace TriageSystem.API.Controllers
             _userManager = userManager;
             _tokenService = tokenService;
         }
-        
-        [HttpPost("register-patient")]
-        public async Task<IActionResult> RegisterPatient([FromBody] UserRegisterDto registerDto)
-        {
-            if (await _userManager.FindByEmailAsync(registerDto.Email) != null)
-            {
-                return BadRequest(new { Message = "Email is already registered." });
-            }
-
-            var user = new AppUser
-            {
-                UserName = registerDto.Email, 
-                Email = registerDto.Email,
-                FirstName = registerDto.FirstName,
-                LastName = registerDto.LastName,
-                PhoneNumber = registerDto.PhoneNumber,
-                Sex = registerDto.Sex
-            };
-
-            var result = await _userManager.CreateAsync(user, registerDto.Password);
-            if (!result.Succeeded) return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
-
-            await _userManager.AddToRoleAsync(user, "Patient");
-
-            return Ok(new { Message = "Patient registered successfully." });
-        }
 
         [HttpPost("register-staff")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> RegisterStaff([FromBody] StaffRegisterDto registerDto)
+        public async Task<IActionResult> RegisterStaff([FromBody] RegisterDto registerDto)
         {
             // Fixed: "Reception" changed to "Receptionist" to match DbInitializer
             var allowedRoles = new[] { "Doctor", "Nurse", "Receptionist", "Reviewer" };
@@ -92,6 +66,10 @@ namespace TriageSystem.API.Controllers
 
             var token = await _tokenService.CreateToken(user);
             var roles = await _userManager.GetRolesAsync(user);
+            if (string.IsNullOrEmpty(user.Email))
+            {
+                return StatusCode(500, "User email is missing.");
+            }
             
             return Ok(new AuthResponseDto
             {

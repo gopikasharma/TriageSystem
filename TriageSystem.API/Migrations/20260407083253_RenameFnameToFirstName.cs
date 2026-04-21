@@ -22,17 +22,17 @@ namespace TriageSystem.API.Migrations
         }
 
         /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
+       protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.RenameColumn(
-                name: "Lname",
-                table: "AspNetUsers",
-                newName: "LastName");
+            name: "FirstName",
+            table: "AspNetUsers",
+            newName: "Fname");
 
             migrationBuilder.RenameColumn(
-                name: "Fname",
-                table: "AspNetUsers",
-                newName: "FirstName");
-        }
+            name: "LastName",
+            table: "AspNetUsers",
+            newName: "Lname");
+            }
     }
 }
