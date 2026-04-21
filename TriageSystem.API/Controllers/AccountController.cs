@@ -74,6 +74,7 @@ namespace TriageSystem.API.Controllers
             return Ok(new AuthResponseDto
             {
                 Email = user.Email,
+                FirstName = user.FirstName,
                 Token = token,
                 Roles = roles
             });

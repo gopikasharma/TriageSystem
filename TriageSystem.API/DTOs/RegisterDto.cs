@@ -28,7 +28,7 @@ public class RegisterDto
     public BiologicalSex Sex { get; set; }
 
     [MaxLength(100)]
-    public string? Specialization { get; set; }  // Only relevant for Doctor
+    public string? Specialization { get; set; }  
 
     [Required]
     public required string Role { get; set; }
