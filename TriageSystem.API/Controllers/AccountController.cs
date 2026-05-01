@@ -21,7 +21,6 @@ namespace TriageSystem.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RegisterStaff([FromBody] RegisterDto registerDto)
         {
-            // Fixed: "Reception" changed to "Receptionist" to match DbInitializer
             var allowedRoles = new[] { "Doctor", "Nurse", "Receptionist", "Reviewer" };
             
             var targetRole = allowedRoles.FirstOrDefault(r => r.Equals(registerDto.Role, StringComparison.OrdinalIgnoreCase));

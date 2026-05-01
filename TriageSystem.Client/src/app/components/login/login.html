@@ -1,0 +1,77 @@
+<div class="flex min-h-screen bg-gray-50 font-sans">
+
+
+  <div class="w-4/12 bg-[#124B3E] text-white p-12 flex flex-col justify-center">
+    <h2 class="text-2xl font-bold mb-6">Access</h2>
+    <div class="space-y-4">
+
+      <button 
+        (click)="switchView('patient')"
+        class="w-full p-3 border border-white/30 rounded-lg hover:bg-white/10"
+        [class.bg-white]="activeView === 'patient'"
+        [class.text-[#124B3E]]="activeView === 'patient'">
+        Patient Registration
+      </button>
+      <button 
+        (click)="switchView('doctor')"
+        class="w-full p-3 border border-white/30 rounded-lg hover:bg-white/10"
+        [class.bg-white]="activeView === 'doctor'"
+        [class.text-[#124B3E]]="activeView === 'doctor'">
+        Doctor Login
+      </button>
+
+    </div>
+  </div>
+
+
+  <div class="w-8/12 bg-white flex items-center justify-center p-10">
+
+
+    <div *ngIf="activeView === 'patient'" class="w-full max-w-md">
+      <h1 class="text-3xl font-bold mb-2">Book Appointment</h1>
+      <p class="text-gray-500 mb-6">No login required</p>
+
+      <form class="space-y-4">
+        <input type="text" placeholder="Full Name" class="w-full p-3 border rounded-lg" />
+        <input type="tel" placeholder="Phone Number" class="w-full p-3 border rounded-lg" />
+        <input type="date" class="w-full p-3 border rounded-lg" />
+        <button class="w-full bg-[#124B3E] text-white p-3 rounded-lg">Continue</button>
+      </form>
+    </div>
+
+    <div *ngIf="activeView === 'doctor'" class="w-full max-w-md">
+      <h1 class="text-3xl font-bold mb-2">Doctor Login</h1>
+      <p class="text-gray-500 mb-6">Secure access only</p>
+
+
+      <div *ngIf="errorMessage" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 text-sm">
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <form (ngSubmit)="processDoctorLogin()" class="space-y-4">
+        
+   
+        <input 
+          type="text" 
+          name="email"
+          [(ngModel)]="doctorCredentials.email"
+          placeholder="Employee ID or Email" 
+          class="w-full p-3 border rounded-lg focus:outline-none focus:border-[#124B3E]" />
+        
+        <input 
+          type="password" 
+          name="password"
+          [(ngModel)]="doctorCredentials.password"
+          placeholder="Password" 
+          class="w-full p-3 border rounded-lg focus:outline-none focus:border-[#124B3E]" />
+        
+        <button type="submit" class="w-full bg-[#124B3E] text-white p-3 rounded-lg hover:bg-[#0B3027] transition-colors font-bold tracking-wide">
+          Initiate Session
+        </button>
+
+      </form>
+    </div>
+
+  </div>
+
+</div>
