@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nurse Portal – AI Patient Prioritization System</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        :root {
+            --primary:#c0632a; --secondary:#e67e22; --sidebar-bg:#1a2a4a;
+            --bg:#f0f4f8; --card:#fff; --border:#e0e6ed;
+            --text:#2c3e50; --muted:#7f8c8d;
+            --danger:#e74c3c; --success:#27ae60; --info:#3498db;
+        }
+        body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; min-height:100vh; }
+        .topbar { background:#b7510e; color:#fff; height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:200; box-shadow:0 2px 10px rgba(0,0,0,0.2); }
+        .topbar-brand { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; }
+        .topbar-right { display:flex; align-items:center; gap:16px; font-size:13px; }
+        .topbar-right a { color:rgba(255,255,255,0.8); text-decoration:none; font-size:12px; }
+        .user-pill { background:rgba(255,255,255,0.15); border-radius:20px; padding:6px 14px; font-size:13px; }
+        .app-body { display:flex; flex:1; }
+        .sidebar { width:220px; background:var(--sidebar-bg); color:#b0bec5; display:flex; flex-direction:column; flex-shrink:0; position:sticky; top:58px; height:calc(100vh - 58px); overflow-y:auto; }
+        .sidebar-nav { flex:1; padding:20px 0; }
+        .nav-section { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#4a5e7a; padding:16px 20px 6px; }
+        .nav-item { display:flex; align-items:center; gap:12px; padding:11px 20px; font-size:13.5px; border-left:3px solid transparent; transition:all 0.15s; color:#8fa8c2; text-decoration:none; }
+        .nav-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+        .nav-item.active { background:rgba(230,126,34,0.18); color:#fff; border-left-color:#e67e22; }
+        .nav-icon { font-size:16px; width:20px; text-align:center; }
+        .sidebar-footer { padding:16px 20px; border-top:1px solid rgba(255,255,255,0.07); font-size:12px; color:#4a5e7a; }
+        .main { flex:1; padding:28px 32px; overflow-y:auto; }
+        .page-title { font-size:22px; font-weight:700; color:#b7510e; margin-bottom:4px; }
+        .page-sub   { font-size:13px; color:var(--muted); margin-bottom:28px; }
+        .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:18px; margin-bottom:28px; }
+        .stat-card { background:var(--card); border-radius:12px; padding:20px 22px; border:1px solid var(--border); }
+        .stat-icon-lg { font-size:28px; margin-bottom:8px; }
+        .stat-val { font-size:28px; font-weight:800; }
+        .stat-lbl { font-size:12px; color:var(--muted); margin-top:2px; }
+        .card { background:var(--card); border-radius:12px; padding:24px 26px; border:1px solid var(--border); margin-bottom:24px; }
+        .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+        .card-title { font-size:16px; font-weight:700; color:#b7510e; display:flex; align-items:center; gap:8px; }
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th,td { padding:11px 14px; text-align:left; border-bottom:1px solid var(--border); }
+        th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; background:#fafbfc; }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:#f7f9fc; }
+        .badge { display:inline-block; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700; }
+        .badge-emergency { background:#fdf2f2; color:#c0392b; border:1px solid #f5b7b1; }
+        .badge-high      { background:#fef5e7; color:#d35400; border:1px solid #f8c471; }
+        .badge-medium    { background:#fefde8; color:#9a7d0a; border:1px solid #f7dc6f; }
+        .badge-low       { background:#eafaf1; color:#1a7a45; border:1px solid #a9dfbf; }
+        .badge-pending   { background:#fef5e7; color:#b7510e; }
+        .badge-validated { background:#eafaf1; color:#1a7a45; }
+        .badge-overridden{ background:#eaf0fb; color:#1a5276; }
+        .btn { padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; font-family:inherit; }
+        .btn-validate { background:#e67e22; color:#fff; }
+        .btn-validate:hover { background:#ca6f1e; }
+        .btn-sm { padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:none; font-family:inherit; }
+        .btn-approve { background:#eafaf1; color:#1a7a45; }
+        .btn-override { background:#eaf0fb; color:#1a5276; }
+        .btn-escalate { background:#fdf2f2; color:#c0392b; }
+        .triage-item {
+            border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:14px;
+            transition:box-shadow 0.15s;
+        }
+        .triage-item:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+        .triage-item.em { border-left:5px solid #e74c3c; }
+        .triage-item.hi { border-left:5px solid #e67e22; }
+        .triage-item.md { border-left:5px solid #f1c40f; }
+        .triage-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
+        .triage-name { font-size:15px; font-weight:700; }
+        .triage-body { font-size:13px; color:var(--muted); margin-bottom:12px; line-height:1.5; }
+        .triage-meta { display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-bottom:12px; }
+        .triage-meta strong { color:var(--text); }
+        .triage-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .score-big { font-size:22px; font-weight:800; }
+        .sc-em { color:#e74c3c; }
+        .sc-hi { color:#e67e22; }
+        .sc-md { color:#9a7d0a; }
+        .two-col { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+        .form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+        label { font-size:12px; font-weight:600; color:var(--text); }
+        input,select,textarea { border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13px; font-family:inherit; color:var(--text); background:#fff; width:100%; }
+        input:focus,select:focus,textarea:focus { outline:none; border-color:var(--secondary); }
+        @media(max-width:900px) { .two-col { grid-template-columns:1fr; } }
+        @media(max-width:768px) { .sidebar { display:none; } .main { padding:18px; } }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-brand">💉 <span>Nurse Triage Portal</span></div>
+    <div class="topbar-right">
+        <span>🕐 10:25 AM, Apr 22, 2026</span>
+        <div class="user-pill">💉 Nurse Rani</div>
+        <a href="index.html">← All Portals</a>
+    </div>
+</div>
+
+<div class="app-body">
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <div class="nav-section">Triage Menu</div>
+            <a href="#dashboard"   class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</a>
+            <a href="#triage"      class="nav-item"><span class="nav-icon">📋</span> Triage Queue</a>
+            <a href="#validate"    class="nav-item"><span class="nav-icon">✅</span> Validate Scores</a>
+            <a href="#completed"   class="nav-item"><span class="nav-icon">✔️</span> Completed Today</a>
+            <div class="nav-section">Clinical</div>
+            <a href="#notes"       class="nav-item"><span class="nav-icon">📝</span> Patient Notes</a>
+            <a href="#reports"     class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        </nav>
+        <div class="sidebar-footer">Nurse Portal v1.0</div>
+    </aside>
+
+    <main class="main">
+        <div id="dashboard">
+        <div class="page-title">Nurse Triage Dashboard</div>
+        <div class="page-sub">Clinical triage validation — Wednesday, April 22, 2026</div>
+
+        <div class="stat-row">
+            <div class="stat-card">
+                <div class="stat-icon-lg">⏳</div>
+                <div class="stat-val" style="color:#b7510e">5</div>
+                <div class="stat-lbl">Pending Validation</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-lg">✅</div>
+                <div class="stat-val" style="color:var(--success)">18</div>
+                <div class="stat-lbl">Validated Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-lg">🔄</div>
+                <div class="stat-val" style="color:var(--info)">3</div>
+                <div class="stat-lbl">AI Overrides Made</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-lg">🚨</div>
+                <div class="stat-val" style="color:var(--danger)">2</div>
+                <div class="stat-lbl">Emergency Escalations</div>
+            </div>
+        </div>
+
+        <!-- Triage Queue -->
+        <div id="triage" class="card">
+            <div class="card-header">
+                <div class="card-title">📋 Triage Validation Queue</div>
+                <span style="font-size:12px;background:#fef5e7;color:#b7510e;padding:4px 12px;border-radius:10px;font-weight:600;">5 Pending</span>
+            </div>
+
+            <!-- Emergency case -->
+            <div class="triage-item em">
+                <div class="triage-top">
+                    <div>
+                        <span class="triage-name">Ravi Kumar</span>
+                        <span style="font-size:12px;color:var(--muted);margin-left:10px">ID: P-1042 · Age 58 · Male</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="score-big sc-em">91/100</span>
+                        <span class="badge badge-emergency">🚨 Emergency</span>
+                    </div>
+                </div>
+                <div class="triage-body">Chief Complaint: <strong>Severe chest pain with radiating arm pain and sweating</strong>. Pain level: 9/10. Duration: 30 minutes. History of hypertension.</div>
+                <div class="triage-meta">
+                    <span>AI Confidence: <strong>96%</strong></span>
+                    <span>Department: <strong>Cardiology / Emergency</strong></span>
+                    <span>Submitted: <strong>10:05 AM</strong></span>
+                </div>
+                <div style="background:#fdf2f2;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#922b21;margin-bottom:12px">
+                    <strong>AI Reasoning:</strong> High-severity chest pain with cardiac risk factors. Combined with sweating and radiation to arm, a cardiac event cannot be excluded. Immediate evaluation required.
+                </div>
+                <div class="triage-actions">
+                    <button class="btn-sm btn-approve" onclick="alert('✅ Emergency validated and confirmed for Ravi Kumar.')">✅ Confirm Emergency</button>
+                    <button class="btn-sm btn-override" onclick="alert('Override panel opened for Ravi Kumar.')">🔄 Override Score</button>
+                    <button class="btn-sm btn-escalate" onclick="alert('🚨 Escalated to Emergency Department!')">🚨 Escalate to ED</button>
+                </div>
+            </div>
+
+            <!-- High priority -->
+            <div class="triage-item hi">
+                <div class="triage-top">
+                    <div>
+                        <span class="triage-name">Mohammed Ali</span>
+                        <span style="font-size:12px;color:var(--muted);margin-left:10px">ID: P-1056 · Age 45 · Male</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="score-big sc-hi">74/100</span>
+                        <span class="badge badge-high">🔴 High</span>
+                    </div>
+                </div>
+                <div class="triage-body">Chief Complaint: <strong>Severe abdominal pain, right side, worsening over 2 hours</strong>. Pain level: 8/10. Nausea and fever (38.5°C). No prior history.</div>
+                <div class="triage-meta">
+                    <span>AI Confidence: <strong>88%</strong></span>
+                    <span>Department: <strong>Surgery / Gastroenterology</strong></span>
+                    <span>Submitted: <strong>09:50 AM</strong></span>
+                </div>
+                <div class="triage-actions">
+                    <button class="btn-sm btn-approve" onclick="alert('✅ High priority validated for Mohammed Ali.')">✅ Validate High</button>
+                    <button class="btn-sm btn-override" onclick="alert('Override score panel opened.')">🔄 Override Score</button>
+                </div>
+            </div>
+
+            <!-- Medium priority -->
+            <div class="triage-item md">
+                <div class="triage-top">
+                    <div>
+                        <span class="triage-name">Priya Sharma</span>
+                        <span style="font-size:12px;color:var(--muted);margin-left:10px">ID: P-1028 · Age 38 · Female</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="score-big sc-md">58/100</span>
+                        <span class="badge badge-medium">🟡 Medium</span>
+                    </div>
+                </div>
+                <div class="triage-body">Chief Complaint: <strong>Shortness of breath and mild dizziness after exercise</strong>. Pain level: 6/10. Duration: 3 hours. History of hypertension, on Metformin.</div>
+                <div class="triage-meta">
+                    <span>AI Confidence: <strong>82%</strong></span>
+                    <span>Department: <strong>Cardiology</strong></span>
+                    <span>Submitted: <strong>09:10 AM</strong></span>
+                </div>
+                <div class="triage-actions">
+                    <button class="btn-sm btn-approve" onclick="alert('✅ Medium priority validated for Priya Sharma.')">✅ Validate Medium</button>
+                    <button class="btn-sm btn-override" onclick="alert('Override score panel opened.')">🔄 Override Score</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validate + Completed -->
+        <div class="two-col">
+            <div id="validate" class="card">
+                <div class="card-title">🔄 Override AI Priority</div>
+                <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Use clinical judgment to override the AI-assigned score. All overrides are audit-logged.</p>
+                <div class="form-group">
+                    <label>Patient</label>
+                    <select>
+                        <option>Select patient from queue…</option>
+                        <option>Ravi Kumar (P-1042) – AI Score: 91</option>
+                        <option>Mohammed Ali (P-1056) – AI Score: 74</option>
+                        <option>Priya Sharma (P-1028) – AI Score: 58</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Override Priority Level</label>
+                    <select>
+                        <option>🚨 Emergency (80–100)</option>
+                        <option>🔴 High (60–79)</option>
+                        <option selected>🟡 Medium (30–59)</option>
+                        <option>🟢 Low (0–29)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Clinical Reason for Override *</label>
+                    <textarea placeholder="Describe your clinical reasoning…" style="min-height:70px"></textarea>
+                </div>
+                <button class="btn btn-validate" style="width:100%" onclick="alert('✅ Override submitted and audit-logged.\nPatient priority updated to Medium.\nOverride recorded under Nurse Rani.')">Submit Override</button>
+            </div>
+
+            <div id="completed" class="card">
+                <div class="card-title">✔️ Validated Today</div>
+                <table>
+                    <thead>
+                        <tr><th>Patient</th><th>AI Score</th><th>Outcome</th><th>Time</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Ananya Patel</td>
+                            <td>68</td>
+                            <td><span class="badge badge-validated">Confirmed High</span></td>
+                            <td>09:55 AM</td>
+                        </tr>
+                        <tr>
+                            <td>Kavya R.</td>
+                            <td>45</td>
+                            <td><span class="badge badge-overridden">↑ Upgraded High</span></td>
+                            <td>09:30 AM</td>
+                        </tr>
+                        <tr>
+                            <td>Suresh B.</td>
+                            <td>88</td>
+                            <td><span class="badge badge-validated">Emergency ✓</span></td>
+                            <td>08:45 AM</td>
+                        </tr>
+                        <tr>
+                            <td>Deepa K.</td>
+                            <td>25</td>
+                            <td><span class="badge badge-validated">Confirmed Low</span></td>
+                            <td>08:20 AM</td>
+                        </tr>
+                        <tr>
+                            <td>Latha M.</td>
+                            <td>52</td>
+                            <td><span class="badge badge-overridden">↓ Downgrade Low</span></td>
+                            <td>08:05 AM</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

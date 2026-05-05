@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard – AI Patient Prioritization System</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        :root {
+            --primary:#1a5276; --secondary:#2c5aa0; --accent:#3498db;
+            --sidebar-bg:#0f1f38; --bg:#f0f4f8; --card:#fff;
+            --border:#e0e6ed; --text:#2c3e50; --muted:#7f8c8d;
+            --danger:#e74c3c; --warning:#e67e22; --success:#27ae60;
+        }
+        body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; min-height:100vh; }
+        .topbar { background:var(--primary); color:#fff; height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:200; box-shadow:0 2px 10px rgba(0,0,0,0.25); }
+        .topbar-brand { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; }
+        .topbar-right { display:flex; align-items:center; gap:16px; font-size:13px; }
+        .topbar-right a { color:rgba(255,255,255,0.8); text-decoration:none; font-size:12px; }
+        .user-pill { background:rgba(255,255,255,0.15); border-radius:20px; padding:6px 16px; font-size:13px; }
+        .app-body { display:flex; flex:1; }
+        .sidebar { width:220px; background:var(--sidebar-bg); color:#b0bec5; display:flex; flex-direction:column; flex-shrink:0; position:sticky; top:58px; height:calc(100vh - 58px); overflow-y:auto; }
+        .sidebar-nav { flex:1; padding:20px 0; }
+        .nav-section { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#2a3f5c; padding:16px 20px 6px; }
+        .nav-item { display:flex; align-items:center; gap:12px; padding:11px 20px; font-size:13.5px; border-left:3px solid transparent; transition:all 0.15s; color:#6a8aaa; text-decoration:none; }
+        .nav-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+        .nav-item.active { background:rgba(52,152,219,0.18); color:#fff; border-left-color:#3498db; }
+        .nav-icon { font-size:16px; width:20px; text-align:center; }
+        .sidebar-footer { padding:16px 20px; border-top:1px solid rgba(255,255,255,0.06); font-size:12px; color:#2a3f5c; }
+        .main { flex:1; padding:28px 32px; overflow-y:auto; }
+        .page-title { font-size:22px; font-weight:700; color:var(--primary); margin-bottom:4px; }
+        .page-sub   { font-size:13px; color:var(--muted); margin-bottom:28px; }
+        .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:18px; margin-bottom:28px; }
+        .stat-card { background:var(--card); border-radius:12px; padding:20px 22px; border:1px solid var(--border); border-top:4px solid transparent; }
+        .stat-card.s-em { border-top-color:var(--danger); }
+        .stat-card.s-hi { border-top-color:var(--warning); }
+        .stat-card.s-ok { border-top-color:var(--success); }
+        .stat-card.s-inf{ border-top-color:var(--accent); }
+        .stat-val { font-size:30px; font-weight:800; margin-bottom:4px; }
+        .stat-lbl { font-size:12px; color:var(--muted); }
+        .card { background:var(--card); border-radius:12px; padding:24px 26px; border:1px solid var(--border); margin-bottom:24px; }
+        .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:8px; }
+        .card-title { font-size:16px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:8px; }
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th,td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); vertical-align:middle; }
+        th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; background:#fafbfc; }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:#f5f8fc; }
+        .badge { display:inline-block; padding:3px 11px; border-radius:10px; font-size:11px; font-weight:700; }
+        .badge-emergency { background:#fdf2f2; color:#c0392b; border:1px solid #f5b7b1; }
+        .badge-high      { background:#fef5e7; color:#d35400; border:1px solid #f8c471; }
+        .badge-medium    { background:#fefde8; color:#9a7d0a; border:1px solid #f7dc6f; }
+        .badge-low       { background:#eafaf1; color:#1a7a45; border:1px solid #a9dfbf; }
+        .badge-completed { background:#eaf0fb; color:#1a5276; }
+        .badge-active    { background:#eafaf1; color:#1a7a45; }
+        .badge-waiting   { background:#fef5e7; color:#d35400; }
+        .row-em td { background:#fff8f8; }
+        .row-hi td { background:#fffaf5; }
+        .patient-name { font-weight:700; font-size:13.5px; }
+        .patient-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+        .score-cell { display:flex; align-items:center; gap:8px; }
+        .score-bar-wrap { flex:1; background:#eff2f7; border-radius:4px; height:8px; min-width:60px; }
+        .score-bar { height:8px; border-radius:4px; }
+        .sb-em { background:var(--danger); }
+        .sb-hi { background:var(--warning); }
+        .sb-md { background:#f1c40f; }
+        .sb-lo { background:var(--success); }
+        .score-num { font-weight:800; font-size:13px; min-width:30px; }
+        .btn-sm { padding:5px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:none; font-family:inherit; }
+        .btn-view { background:#eaf0fb; color:var(--primary); }
+        .btn-view:hover { background:#d0e3f5; }
+        .btn-start { background:linear-gradient(90deg,var(--secondary),var(--accent)); color:#fff; }
+        .btn-start:hover { opacity:0.9; }
+        .two-col { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+        /* Schedule timeline */
+        .schedule-item { display:flex; gap:16px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border); }
+        .schedule-item:last-child { border-bottom:none; }
+        .sch-time { font-size:12px; font-weight:700; color:var(--primary); min-width:60px; text-align:right; padding-top:2px; }
+        .sch-dot { width:12px; height:12px; border-radius:50%; border:2px solid var(--accent); background:#fff; flex-shrink:0; margin-top:4px; }
+        .sch-dot.done { background:var(--success); border-color:var(--success); }
+        .sch-dot.active { background:var(--accent); border-color:var(--accent); }
+        .sch-content { flex:1; }
+        .sch-name { font-weight:600; font-size:13.5px; }
+        .sch-detail { font-size:12px; color:var(--muted); margin-top:2px; }
+        /* Bar chart */
+        .bar-chart { display:flex; gap:14px; align-items:flex-end; height:120px; padding:0 8px; }
+        .bar-col { display:flex; flex-direction:column; align-items:center; flex:1; gap:4px; }
+        .bar { width:100%; border-radius:6px 6px 0 0; transition:opacity 0.2s; }
+        .bar:hover { opacity:0.85; }
+        .bar-val { font-size:10px; font-weight:700; color:var(--muted); }
+        .bar-lbl { font-size:10px; color:var(--muted); margin-top:4px; }
+        .chart-wrap { border-top:2px solid var(--border); }
+        @media(max-width:900px) { .two-col { grid-template-columns:1fr; } }
+        @media(max-width:768px) { .sidebar { display:none; } .main { padding:18px; } }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-brand">👨‍⚕️ <span>Doctor Dashboard</span></div>
+    <div class="topbar-right">
+        <span>🕐 10:25 AM, Apr 22, 2026</span>
+        <div class="user-pill">Dr. Sarah Johnson – Cardiology</div>
+        <a href="index.html">← All Portals</a>
+    </div>
+</div>
+
+<div class="app-body">
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <div class="nav-section">Doctor Menu</div>
+            <a href="#dashboard"   class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</a>
+            <a href="#queue"       class="nav-item"><span class="nav-icon">📋</span> Patient Queue</a>
+            <a href="#schedule"    class="nav-item"><span class="nav-icon">📅</span> My Schedule</a>
+            <a href="#analytics"   class="nav-item"><span class="nav-icon">📊</span> Analytics</a>
+            <div class="nav-section">Clinical</div>
+            <a href="#history"     class="nav-item"><span class="nav-icon">🗂️</span> Patient History</a>
+            <a href="#notes"       class="nav-item"><span class="nav-icon">📝</span> My Notes</a>
+        </nav>
+        <div class="sidebar-footer">Doctor Portal v1.0</div>
+    </aside>
+
+    <main class="main">
+        <div id="dashboard">
+        <div class="page-title">Dr. Sarah Johnson</div>
+        <div class="page-sub">Good morning! Today is Wednesday, April 22, 2026 — You have 8 patients scheduled.</div>
+
+        <div class="stat-row">
+            <div class="stat-card s-inf">
+                <div class="stat-val" style="color:var(--accent)">8</div>
+                <div class="stat-lbl">Today's Patients</div>
+            </div>
+            <div class="stat-card s-em">
+                <div class="stat-val" style="color:var(--danger)">2</div>
+                <div class="stat-lbl">Emergency / High</div>
+            </div>
+            <div class="stat-card s-ok">
+                <div class="stat-val" style="color:var(--success)">5</div>
+                <div class="stat-lbl">Appointments Done</div>
+            </div>
+            <div class="stat-card s-hi">
+                <div class="stat-val" style="color:var(--warning)">42 min</div>
+                <div class="stat-lbl">Avg Wait Time Today</div>
+            </div>
+        </div>
+
+        <!-- Priority Queue -->
+        <div id="queue" class="card">
+            <div class="card-header">
+                <div class="card-title">📋 Priority Patient Queue</div>
+                <span style="font-size:12px;color:var(--muted)">Sorted by urgency · Nurse-validated</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Patient</th>
+                        <th>Chief Complaint</th>
+                        <th>AI Score</th>
+                        <th>Priority</th>
+                        <th>Appointment</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="row-em">
+                        <td><strong>1</strong></td>
+                        <td>
+                            <div class="patient-name">Ravi Kumar</div>
+                            <div class="patient-meta">P-1042 · Age 58 · Cardiology</div>
+                        </td>
+                        <td>Chest pain with arm radiation</td>
+                        <td>
+                            <div class="score-cell">
+                                <div class="score-bar-wrap"><div class="score-bar sb-em" style="width:91%"></div></div>
+                                <span class="score-num" style="color:var(--danger)">91</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-emergency">🚨 Emergency</span></td>
+                        <td>ASAP</td>
+                        <td><span class="badge badge-active">In Triage</span></td>
+                        <td>
+                            <button class="btn-sm btn-start" onclick="alert('Starting consultation for Ravi Kumar.\nOpening patient record…')">Start</button>
+                        </td>
+                    </tr>
+                    <tr class="row-hi">
+                        <td>2</td>
+                        <td>
+                            <div class="patient-name">Mohammed Ali</div>
+                            <div class="patient-meta">P-1056 · Age 45 · Surgery</div>
+                        </td>
+                        <td>Severe abdominal pain, fever</td>
+                        <td>
+                            <div class="score-cell">
+                                <div class="score-bar-wrap"><div class="score-bar sb-hi" style="width:74%"></div></div>
+                                <span class="score-num" style="color:var(--warning)">74</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-high">🔴 High</span></td>
+                        <td>11:30 AM</td>
+                        <td><span class="badge badge-waiting">Waiting</span></td>
+                        <td>
+                            <button class="btn-sm btn-view" onclick="alert('Viewing patient summary for Mohammed Ali.\nChief Complaint: Severe abdominal pain, right side, 2 hours.\nVitals: Temp 38.5°C, HR 104')">View</button>
+                        </td>
+                    </tr>
+                    <tr class="row-hi">
+                        <td>3</td>
+                        <td>
+                            <div class="patient-name">Ananya Patel</div>
+                            <div class="patient-meta">P-1061 · Age 32 · Neurology</div>
+                        </td>
+                        <td>Severe migraine, vomiting</td>
+                        <td>
+                            <div class="score-cell">
+                                <div class="score-bar-wrap"><div class="score-bar sb-hi" style="width:68%"></div></div>
+                                <span class="score-num" style="color:var(--warning)">68</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-high">🔴 High</span></td>
+                        <td>10:00 AM</td>
+                        <td><span class="badge badge-active">In Progress</span></td>
+                        <td>
+                            <button class="btn-sm btn-view" onclick="alert('Viewing Ananya Patel record…')">View</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>
+                            <div class="patient-name">Priya Sharma</div>
+                            <div class="patient-meta">P-1028 · Age 38 · Cardiology</div>
+                        </td>
+                        <td>Shortness of breath, dizziness</td>
+                        <td>
+                            <div class="score-cell">
+                                <div class="score-bar-wrap"><div class="score-bar sb-md" style="width:58%"></div></div>
+                                <span class="score-num" style="color:#9a7d0a">58</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-medium">🟡 Medium</span></td>
+                        <td>3:30 PM</td>
+                        <td><span class="badge badge-waiting">Confirmed</span></td>
+                        <td>
+                            <button class="btn-sm btn-view" onclick="alert('Viewing Priya Sharma record…')">View</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>
+                            <div class="patient-name">Sunita Verma</div>
+                            <div class="patient-meta">P-1073 · Age 29 · Orthopaedics</div>
+                        </td>
+                        <td>Knee pain after fall – swelling</td>
+                        <td>
+                            <div class="score-cell">
+                                <div class="score-bar-wrap"><div class="score-bar sb-md" style="width:42%"></div></div>
+                                <span class="score-num" style="color:#9a7d0a">42</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-medium">🟡 Medium</span></td>
+                        <td>2:00 PM</td>
+                        <td><span class="badge badge-waiting">Confirmed</span></td>
+                        <td>
+                            <button class="btn-sm btn-view" onclick="alert('Viewing Sunita Verma record…')">View</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>
+                            <div class="patient-name">Arjun Nair</div>
+                            <div class="patient-meta">P-1081 · Age 52 · Endocrinology</div>
+                        </td>
+                        <td>Diabetes follow-up, fatigue</td>
+                        <td>
+                            <div class="score-cell">
+                                <div class="score-bar-wrap"><div class="score-bar sb-lo" style="width:22%"></div></div>
+                                <span class="score-num" style="color:var(--success)">22</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-low">🟢 Low</span></td>
+                        <td>Apr 23</td>
+                        <td><span class="badge badge-completed">Scheduled</span></td>
+                        <td>
+                            <button class="btn-sm btn-view" onclick="alert('Viewing Arjun Nair record…')">View</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Schedule + Analytics -->
+        <div class="two-col">
+
+            <!-- Today's Schedule -->
+            <div id="schedule" class="card">
+                <div class="card-title">📅 Today's Schedule</div>
+                <div style="margin-top:10px">
+                    <div class="schedule-item">
+                        <div class="sch-time">08:30</div>
+                        <div class="sch-dot done"></div>
+                        <div class="sch-content">
+                            <div class="sch-name">Deepa K. — Follow-up</div>
+                            <div class="sch-detail">Low · Completed ✓</div>
+                        </div>
+                    </div>
+                    <div class="schedule-item">
+                        <div class="sch-time">09:15</div>
+                        <div class="sch-dot done"></div>
+                        <div class="sch-content">
+                            <div class="sch-name">Suresh B. — Emergency</div>
+                            <div class="sch-detail">Emergency · Completed ✓</div>
+                        </div>
+                    </div>
+                    <div class="schedule-item">
+                        <div class="sch-time">10:00</div>
+                        <div class="sch-dot active"></div>
+                        <div class="sch-content">
+                            <div class="sch-name">Ananya Patel — Migraine</div>
+                            <div class="sch-detail" style="color:var(--accent);font-weight:600">High · In Progress →</div>
+                        </div>
+                    </div>
+                    <div class="schedule-item">
+                        <div class="sch-time">11:30</div>
+                        <div class="sch-dot"></div>
+                        <div class="sch-content">
+                            <div class="sch-name">Mohammed Ali — Abdom. Pain</div>
+                            <div class="sch-detail">High · Upcoming</div>
+                        </div>
+                    </div>
+                    <div class="schedule-item">
+                        <div class="sch-time">14:00</div>
+                        <div class="sch-dot"></div>
+                        <div class="sch-content">
+                            <div class="sch-name">Sunita Verma — Knee</div>
+                            <div class="sch-detail">Medium · Upcoming</div>
+                        </div>
+                    </div>
+                    <div class="schedule-item">
+                        <div class="sch-time">15:30</div>
+                        <div class="sch-dot"></div>
+                        <div class="sch-content">
+                            <div class="sch-name">Priya Sharma — Cardiology</div>
+                            <div class="sch-detail">Medium · Upcoming</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics -->
+            <div id="analytics" class="card">
+                <div class="card-title">📊 This Week's Overview</div>
+                <div style="margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px">
+                        <span>Patients Seen</span>
+                        <span>Week of Apr 20–26</span>
+                    </div>
+                    <div class="chart-wrap" style="padding-top:10px">
+                        <div class="bar-chart">
+                            <div class="bar-col">
+                                <div class="bar-val">6</div>
+                                <div class="bar sb-lo" style="height:50px"></div>
+                                <div class="bar-lbl">Mon</div>
+                            </div>
+                            <div class="bar-col">
+                                <div class="bar-val">9</div>
+                                <div class="bar sb-hi" style="height:76px"></div>
+                                <div class="bar-lbl">Tue</div>
+                            </div>
+                            <div class="bar-col">
+                                <div class="bar-val">8</div>
+                                <div class="bar sb-inf" style="height:68px;background:#3498db"></div>
+                                <div class="bar-lbl">Wed</div>
+                            </div>
+                            <div class="bar-col">
+                                <div class="bar-val">—</div>
+                                <div class="bar" style="height:4px;background:#e0e6ed"></div>
+                                <div class="bar-lbl">Thu</div>
+                            </div>
+                            <div class="bar-col">
+                                <div class="bar-val">—</div>
+                                <div class="bar" style="height:4px;background:#e0e6ed"></div>
+                                <div class="bar-lbl">Fri</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <table style="font-size:12px">
+                    <tbody>
+                        <tr>
+                            <td style="color:var(--muted)">AI Priority Accuracy</td>
+                            <td><strong style="color:var(--success)">91%</strong> this week</td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--muted)">Avg Consultation Time</td>
+                            <td><strong>18 min</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--muted)">Emergency Cases</td>
+                            <td><strong style="color:var(--danger)">3</strong> this week</td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--muted)">Patient Satisfaction</td>
+                            <td><strong style="color:var(--success)">⭐ 4.7 / 5.0</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

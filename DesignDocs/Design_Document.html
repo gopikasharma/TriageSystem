@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Document – AI Patient Appointment Prioritization System</title>
+    <style>
+        :root {
+            --primary: #2c5aa0;
+            --secondary: #3498db;
+            --accent: #27ae60;
+            --warning: #e67e22;
+            --danger: #e74c3c;
+            --light-bg: #f4f7fb;
+            --card-bg: #ffffff;
+            --border: #dde3ed;
+            --text: #2c3e50;
+            --muted: #7f8c8d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.75;
+            color: var(--text);
+            background-color: var(--light-bg);
+        }
+
+        /* ── Cover ── */
+        .cover {
+            background: linear-gradient(135deg, #1a3a6b 0%, #2c5aa0 60%, #3498db 100%);
+            color: #fff;
+            padding: 70px 60px 60px;
+            text-align: center;
+        }
+        .cover .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 4px 18px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+        .cover h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        .cover h2 {
+            font-size: 18px;
+            font-weight: 400;
+            opacity: 0.85;
+            margin-bottom: 40px;
+            border: none;
+            padding: 0;
+            color: #fff;
+        }
+        .cover-meta {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .cover-meta div { display: flex; flex-direction: column; align-items: center; }
+        .cover-meta strong { font-size: 15px; margin-bottom: 2px; }
+
+        /* ── Layout ── */
+        .page { max-width: 960px; margin: 0 auto; padding: 40px 30px 60px; }
+
+        /* ── Table of Contents ── */
+        .toc {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px 32px;
+            margin-bottom: 40px;
+        }
+        .toc h2 { font-size: 16px; margin-bottom: 16px; }
+        .toc ol { padding-left: 20px; }
+        .toc li { margin: 6px 0; }
+        .toc a { color: var(--secondary); text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+        .toc .sub { padding-left: 18px; margin-top: 4px; list-style-type: lower-alpha; }
+
+        /* ── Section headings ── */
+        .section { margin-bottom: 48px; }
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--primary);
+            font-size: 22px;
+            font-weight: 700;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--secondary);
+            margin-bottom: 24px;
+        }
+        .section-title .num {
+            background: var(--primary);
+            color: #fff;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        h3 {
+            color: #1f4e90;
+            font-size: 16px;
+            margin: 24px 0 10px;
+            padding-left: 12px;
+            border-left: 4px solid var(--secondary);
+        }
+        h4 {
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 600;
+            margin: 16px 0 6px;
+        }
+
+        /* ── Cards / info blocks ── */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 12px 0;
+        }
+        .card-blue   { border-left: 5px solid var(--secondary);  background: #eef6fd; }
+        .card-green  { border-left: 5px solid var(--accent);     background: #edfaf3; }
+        .card-yellow { border-left: 5px solid var(--warning);    background: #fef9ec; }
+        .card-red    { border-left: 5px solid var(--danger);     background: #fdf2f2; }
+        .card-purple { border-left: 5px solid #8e44ad;           background: #f8f2fd; }
+
+        /* ── Tables ── */
+        table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+        th {
+            background: var(--primary);
+            color: #fff;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        tr:nth-child(even) td { background: #f7f9fc; }
+
+        /* ── Code / pre ── */
+        pre, code {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12.5px;
+            background: #1e2a3a;
+            color: #d6e4f0;
+            border-radius: 6px;
+        }
+        pre { padding: 16px 18px; overflow-x: auto; margin: 12px 0; line-height: 1.55; }
+        code { padding: 1px 6px; }
+
+        /* ── Architecture diagram ── */
+        .arch-diagram {
+            display: grid;
+            grid-template-columns: 1fr 40px 1fr 40px 1fr;
+            align-items: center;
+            gap: 0;
+            margin: 24px 0;
+        }
+        .arch-box {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 12px;
+            text-align: center;
+        }
+        .arch-box .icon { font-size: 26px; margin-bottom: 6px; }
+        .arch-box .label { font-size: 13px; font-weight: 700; color: var(--primary); }
+        .arch-box .sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+        .arch-arrow { text-align: center; font-size: 24px; color: var(--secondary); }
+
+        /* ── Flow steps ── */
+        .flow { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .flow-step-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .flow-step-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .flow-step-line {
+            width: 2px;
+            flex: 1;
+            min-height: 20px;
+            background: #c0d6e8;
+            margin: 3px 0;
+        }
+        .flow-step-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 12px 16px;
+            margin-bottom: 6px;
+            flex: 1;
+        }
+        .flow-step-content strong { display: block; margin-bottom: 3px; color: var(--primary); }
+
+        /* ── Priority badges ── */
+        .badge-emergency { background:#c0392b; color:#fff; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+        .badge-high      { background:#e67e22; color:#fff; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+        .badge-medium    { background:#f1c40f; color:#333; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+        .badge-low       { background:#27ae60; color:#fff; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+
+        /* ── Tag pills ── */
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .tag {
+            background: #dde8f9;
+            color: var(--primary);
+            border-radius: 14px;
+            padding: 3px 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* ── Utility ── */
+        ul, ol { padding-left: 20px; margin: 8px 0; }
+        li { margin: 4px 0; }
+        p  { margin: 8px 0; }
+        .muted { color: var(--muted); font-size: 12px; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+        @media (max-width: 640px) {
+            .two-col { grid-template-columns: 1fr; }
+            .arch-diagram { grid-template-columns: 1fr; }
+            .arch-arrow { transform: rotate(90deg); }
+        }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            padding: 24px 30px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ COVER ═══════════════════════════════════ -->
+<div class="cover">
+    <div class="badge">Design Document · v1.0</div>
+    <h1>AI Patient Appointment<br>Prioritization System</h1>
+    <h2>System Design &amp; Architecture Specification</h2>
+    <div class="cover-meta">
+        <div><strong>Author</strong>Gopika</div>
+        <div><strong>Document Type</strong>Design Document</div>
+        <div><strong>Version</strong>1.0</div>
+        <div><strong>Date</strong>April 22, 2026</div>
+        <div><strong>Project Duration</strong>April 1 – June 30, 2026</div>
+    </div>
+</div>
+
+<div class="page">
+
+<!-- ═══════════════════════════════════ TOC ════════════════════════════════════ -->
+<div class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+        <li><a href="#overview">Project Overview</a></li>
+        <li><a href="#problem">Problem Statement</a></li>
+        <li><a href="#features">Features (Functional Scope)</a></li>
+        <li><a href="#architecture">System Architecture (High-Level)</a></li>
+        <li>
+            <a href="#design">Design</a>
+            <ol class="sub">
+                <li><a href="#module-design">Module Design</a></li>
+                <li><a href="#api-design">API Design</a></li>
+                <li><a href="#data-flow">Data Flow</a></li>
+                <li><a href="#error-handling">Error Handling</a></li>
+            </ol>
+        </li>
+        <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
+    </ol>
+</div>
+
+
+<!-- ═══════════════════════ 1. PROJECT OVERVIEW ════════════════════════════════ -->
+<div class="section" id="overview">
+    <div class="section-title">
+        <div class="num">1</div>
+        Project Overview
+    </div>
+
+    <div class="card card-blue">
+        <p>
+            The <strong>AI Patient Appointment Prioritization System</strong> is a web-based healthcare application
+            that helps hospitals and clinics intelligently prioritize patient appointments based on reported
+            symptoms and medical urgency. By combining rule-based scoring with AI-assisted analysis, the system
+            reduces manual triage effort, improves patient safety, and optimises doctor scheduling.
+        </p>
+    </div>
+
+    <h3>Technology Stack</h3>
+    <div class="two-col">
+        <div class="card">
+            <h4>Frontend</h4>
+            <div class="tags">
+                <span class="tag">Angular 15+ / TypeScript</span>
+                <span class="tag">Angular Material</span>
+                <span class="tag">Chart.js</span>
+                <span class="tag">RxJS</span>
+            </div>
+        </div>
+        <div class="card">
+            <h4>Backend</h4>
+            <div class="tags">
+                <span class="tag">ASP.NET Core 7/8 Web API</span>
+                <span class="tag">C#</span>
+                <span class="tag">Entity Framework Core</span>
+                <span class="tag">AutoMapper</span>
+                <span class="tag">JWT Authentication</span>
+            </div>
+        </div>
+        <div class="card">
+            <h4>Database</h4>
+            <div class="tags">
+                <span class="tag">Microsoft SQL Server</span>
+                <span class="tag">MySQL (alternative)</span>
+                <span class="tag">Redis (optional cache)</span>
+            </div>
+        </div>
+        <div class="card">
+            <h4>AI / ML</h4>
+            <div class="tags">
+                <span class="tag">Azure Cognitive Services</span>
+                <span class="tag">OpenAI GPT-4</span>
+                <span class="tag">ML.NET (custom model)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════ 2. PROBLEM STATEMENT ══════════════════════════════ -->
+<div class="section" id="problem">
+    <div class="section-title">
+        <div class="num">2</div>
+        Problem Statement
+    </div>
+
+    <div class="card card-red">
+        <h4>The Core Problem</h4>
+        <p>
+            In high-footfall hospitals and clinics, appointment scheduling is largely manual.
+            Receptionists and triage nurses rely on subjective judgment to assign urgency levels,
+            leading to inconsistent prioritisation, prolonged wait times for genuinely critical
+            patients, and inefficient use of doctor capacity.
+        </p>
+    </div>
+
+    <h3>Key Pain Points</h3>
+    <table>
+        <thead>
+            <tr><th>#</th><th>Pain Point</th><th>Impact</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>Manual and subjective triage decisions</td>
+                <td>Inconsistent priority assignment; risk of under-triaging serious cases</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Unstructured symptom collection</td>
+                <td>Critical information is missed or recorded inconsistently</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>No unified dashboard for clinical staff</td>
+                <td>Doctors lack real-time insight into the priority queue</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Long patient wait times</td>
+                <td>Patient dissatisfaction and risk to critical patients</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>Lack of auditable decision trail</td>
+                <td>No record of how and why appointments were prioritised</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Target Users</h3>
+    <div class="two-col">
+        <div class="card card-green">
+            <h4>Patients (500 – 1,000)</h4>
+            <p>Self-report symptoms via an online intake form; receive appointment notifications.</p>
+        </div>
+        <div class="card card-green">
+            <h4>Reception Staff (5 – 10)</h4>
+            <p>Register walk-in patients, manage intake data, and oversee the appointment queue.</p>
+        </div>
+        <div class="card card-green">
+            <h4>Nurses (10 – 20)</h4>
+            <p>Review and clinically validate AI-generated priority scores before escalation.</p>
+        </div>
+        <div class="card card-green">
+            <h4>Doctors (15 – 25)</h4>
+            <p>View the prioritised patient list and manage their appointment schedule via a dashboard.</p>
+        </div>
+        <div class="card card-green">
+            <h4>System Administrators (2 – 3)</h4>
+            <p>Manage user accounts, system configuration, reporting, and AI model settings.</p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════ 3. FEATURES (FUNCTIONAL SCOPE) ══════════════════════ -->
+<div class="section" id="features">
+    <div class="section-title">
+        <div class="num">3</div>
+        Features (Functional Scope)
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Feature Area</th><th>Core Functionalities</th><th>User Roles</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Patient Management</strong></td>
+                <td>Patient registration, profile management, medical history, emergency contacts, insurance information</td>
+                <td>Patient, Reception</td>
+            </tr>
+            <tr>
+                <td><strong>Symptom Intake</strong></td>
+                <td>Structured symptom collection form, pain scale (0–10), severity questionnaire, duration &amp; frequency tracking, document/photo upload</td>
+                <td>Patient, Reception, Nurse</td>
+            </tr>
+            <tr>
+                <td><strong>AI Priority Scoring</strong></td>
+                <td>Symptom severity classification, urgency score (0–100), risk factor assessment, department routing recommendation, confidence score, reasoning explanation</td>
+                <td>System (automated)</td>
+            </tr>
+            <tr>
+                <td><strong>Priority Validation</strong></td>
+                <td>Clinical override of AI score, nurse notes and triage comments, escalation to emergency, audit log of all changes</td>
+                <td>Nurse, Doctor</td>
+            </tr>
+            <tr>
+                <td><strong>Appointment Scheduling</strong></td>
+                <td>Priority-based automated scheduling, doctor availability grid, conflict detection, waitlist management, SMS/email notifications and reminders</td>
+                <td>Reception, System</td>
+            </tr>
+            <tr>
+                <td><strong>Doctor Dashboard</strong></td>
+                <td>Prioritised patient queue with colour-coded urgency, patient summary cards, medical history viewer, appointment management controls, performance analytics</td>
+                <td>Doctor</td>
+            </tr>
+            <tr>
+                <td><strong>Reporting &amp; Analytics</strong></td>
+                <td>Wait-time analysis, priority accuracy metrics, department utilisation, AI model performance, patient satisfaction tracking</td>
+                <td>Admin, Doctor</td>
+            </tr>
+            <tr>
+                <td><strong>Administration</strong></td>
+                <td>User &amp; role management, RBAC, system configuration, audit logging, backup &amp; data management</td>
+                <td>Admin</td>
+            </tr>
+            <tr>
+                <td><strong>Authentication &amp; Security</strong></td>
+                <td>JWT-based login, role-based access control, HTTPS, patient data encryption, HIPAA-aligned audit trails</td>
+                <td>All roles</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Priority Levels</h3>
+    <table>
+        <thead>
+            <tr><th>Level</th><th>Score Range</th><th>Meaning</th><th>Target SLA</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><span class="badge-emergency">Emergency</span></td><td>80 – 100</td><td>Life-threatening; immediate clinical attention required</td><td>&lt; 15 min</td></tr>
+            <tr><td><span class="badge-high">High</span></td><td>60 – 79</td><td>Significant discomfort or risk; urgent evaluation needed</td><td>&lt; 1 hour</td></tr>
+            <tr><td><span class="badge-medium">Medium</span></td><td>30 – 59</td><td>Moderate symptoms; prompt but non-urgent care</td><td>&lt; 4 hours</td></tr>
+            <tr><td><span class="badge-low">Low</span></td><td>0 – 29</td><td>Mild or routine condition; routine appointment sufficient</td><td>Same / next day</td></tr>
+        </tbody>
+    </table>
+</div>
+
+
+<!-- ══════════════════════ 4. SYSTEM ARCHITECTURE ══════════════════════════════ -->
+<div class="section" id="architecture">
+    <div class="section-title">
+        <div class="num">4</div>
+        System Architecture (High-Level)
+    </div>
+
+    <div class="arch-diagram">
+        <div class="arch-box">
+            <div class="icon">🖥️</div>
+            <div class="label">Frontend</div>
+            <div class="sub">Angular SPA<br>Angular Material<br>Chart.js</div>
+        </div>
+        <div class="arch-arrow">⇄</div>
+        <div class="arch-box">
+            <div class="icon">⚙️</div>
+            <div class="label">Backend API</div>
+            <div class="sub">ASP.NET Core<br>Web API (RESTful)<br>JWT Auth</div>
+        </div>
+        <div class="arch-arrow">⇄</div>
+        <div class="arch-box">
+            <div class="icon">🗄️</div>
+            <div class="label">Database</div>
+            <div class="sub">MS SQL Server<br>Entity Framework<br>Redis Cache</div>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin: 8px 0 20px; font-size:13px; color:var(--muted);">
+        All three layers communicate over HTTPS. The backend also calls external AI services.
+    </div>
+
+    <!-- Extended architecture view -->
+    <div class="card" style="margin-top: 20px;">
+        <h4>Component Overview</h4>
+        <table>
+            <thead>
+                <tr><th>Layer</th><th>Component</th><th>Responsibility</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="3"><strong>Client</strong></td>
+                    <td>Patient Portal</td>
+                    <td>Symptom intake form, appointment status, notifications</td>
+                </tr>
+                <tr>
+                    <td>Staff Portal</td>
+                    <td>Reception queue management, nurse triage validation</td>
+                </tr>
+                <tr>
+                    <td>Doctor Dashboard</td>
+                    <td>Prioritised patient list, appointment controls, analytics</td>
+                </tr>
+                <tr>
+                    <td rowspan="4"><strong>API Layer</strong></td>
+                    <td>Auth Controller</td>
+                    <td>JWT token issuance and validation</td>
+                </tr>
+                <tr>
+                    <td>Patient Controller</td>
+                    <td>Patient CRUD, symptom submission endpoints</td>
+                </tr>
+                <tr>
+                    <td>Priority Controller</td>
+                    <td>Triggers AI analysis, returns scored assessments</td>
+                </tr>
+                <tr>
+                    <td>Appointment Controller</td>
+                    <td>Scheduling, availability queries, notifications</td>
+                </tr>
+                <tr>
+                    <td rowspan="2"><strong>Service Layer</strong></td>
+                    <td>AI Priority Service</td>
+                    <td>Integrates OpenAI / Azure / ML.NET, returns PriorityAssessment</td>
+                </tr>
+                <tr>
+                    <td>Notification Service</td>
+                    <td>Sends email/SMS confirmations and reminders</td>
+                </tr>
+                <tr>
+                    <td rowspan="2"><strong>Data Layer</strong></td>
+                    <td>ApplicationDbContext</td>
+                    <td>EF Core ORM; manages all database sets</td>
+                </tr>
+                <tr>
+                    <td>Redis Cache</td>
+                    <td>Caches frequent reads (doctor availability, queue snapshots)</td>
+                </tr>
+                <tr>
+                    <td><strong>External</strong></td>
+                    <td>AI APIs</td>
+                    <td>OpenAI GPT-4 / Azure Text Analytics / ML.NET local model</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════ 5. DESIGN ═══════════════════════════════════ -->
+<div class="section" id="design">
+    <div class="section-title">
+        <div class="num">5</div>
+        Design
+    </div>
+
+    <!-- ── 5.1 Module Design ── -->
+    <div id="module-design">
+        <h3>5.1 Module Design</h3>
+        <p>The system follows a <strong>layered, modular architecture</strong> across three Visual Studio / Angular projects:</p>
+
+        <div class="two-col">
+            <div>
+                <h4>Backend Projects (.NET Solution)</h4>
+                <pre>PatientPrioritizationSystem/
+├── PatientPrioritization.API
+│   ├── Controllers/
+│   ├── Middleware/
+│   └── Program.cs
+├── PatientPrioritization.Core
+│   ├── Models/
+│   ├── Interfaces/
+│   └── DTOs/
+├── PatientPrioritization.Infrastructure
+│   ├── Data/ (DbContext)
+│   ├── Repositories/
+│   └── Services/
+└── PatientPrioritization.Tests</pre>
+            </div>
+            <div>
+                <h4>Frontend (Angular)</h4>
+                <pre>patient-portal/src/app/
+├── modules/
+│   ├── patient/
+│   ├── staff/
+│   ├── doctor/
+│   └── admin/
+├── shared/
+│   ├── components/
+│   └── pipes/
+└── services/
+    ├── auth.service.ts
+    ├── patient.service.ts
+    ├── symptom.service.ts
+    └── appointment.service.ts</pre>
+            </div>
+        </div>
+
+        <h4>Module Responsibilities</h4>
+        <table>
+            <thead>
+                <tr><th>Module</th><th>Layer</th><th>Responsibilities</th><th>Key Classes / Components</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Patient Management</strong></td>
+                    <td>API + Core</td>
+                    <td>Patient registration, profile CRUD, medical history storage</td>
+                    <td><code>PatientController</code>, <code>Patient</code>, <code>PatientRepository</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Symptom Intake</strong></td>
+                    <td>API + Core</td>
+                    <td>Structured symptom form submission, file uploads, validation</td>
+                    <td><code>SymptomController</code>, <code>SymptomReport</code>, <code>PatientIntakeComponent</code></td>
+                </tr>
+                <tr>
+                    <td><strong>AI Priority Analysis</strong></td>
+                    <td>Infrastructure</td>
+                    <td>Send symptoms to AI, parse response, persist PriorityAssessment</td>
+                    <td><code>ISymptomAnalysisService</code>, <code>OpenAISymptomService</code>, <code>PriorityCalculationService</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Appointment Scheduling</strong></td>
+                    <td>API + Core</td>
+                    <td>Availability queries, slot booking, conflict detection, waitlist</td>
+                    <td><code>AppointmentController</code>, <code>Appointment</code>, <code>SchedulerService</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Doctor Dashboard</strong></td>
+                    <td>Frontend</td>
+                    <td>Priority queue display, patient summary, appointment controls</td>
+                    <td><code>DoctorDashboardComponent</code>, <code>PriorityQueueComponent</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Notification</strong></td>
+                    <td>Infrastructure</td>
+                    <td>Email/SMS on appointment confirmation, reminders, escalation alerts</td>
+                    <td><code>INotificationService</code>, <code>EmailNotificationService</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Reporting &amp; Analytics</strong></td>
+                    <td>API + Frontend</td>
+                    <td>Aggregated metrics, wait-time charts, AI accuracy reports</td>
+                    <td><code>ReportController</code>, <code>AnalyticsDashboardComponent</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Administration</strong></td>
+                    <td>API + Frontend</td>
+                    <td>User management, RBAC configuration, audit log viewer</td>
+                    <td><code>AdminController</code>, <code>AdminPanelComponent</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Auth &amp; Security</strong></td>
+                    <td>API + Core</td>
+                    <td>JWT issuance/validation, role guards, HTTPS enforcement</td>
+                    <td><code>AuthController</code>, <code>JwtService</code>, Angular <code>AuthGuard</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── 5.2 API Design ── -->
+    <div id="api-design" style="margin-top: 36px;">
+        <h3>5.2 API Design</h3>
+
+        <div class="card card-blue">
+            <p><strong>Base URL:</strong> <code>https://&lt;host&gt;/api/v1</code> &nbsp;|&nbsp;
+            <strong>Protocol:</strong> HTTPS only &nbsp;|&nbsp;
+            <strong>Auth:</strong> Bearer JWT in <code>Authorization</code> header &nbsp;|&nbsp;
+            <strong>Format:</strong> JSON</p>
+        </div>
+
+        <h4>Authentication</h4>
+        <table>
+            <thead><tr><th>Method</th><th>Endpoint</th><th>Request Body</th><th>Response</th><th>Auth</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>POST</td><td><code>/auth/login</code></td>
+                    <td><code>{ email, password }</code></td>
+                    <td><code>{ token, expiresIn, role }</code></td>
+                    <td>Public</td>
+                </tr>
+                <tr>
+                    <td>POST</td><td><code>/auth/refresh</code></td>
+                    <td><code>{ refreshToken }</code></td>
+                    <td><code>{ token, expiresIn }</code></td>
+                    <td>Public</td>
+                </tr>
+                <tr>
+                    <td>POST</td><td><code>/auth/logout</code></td>
+                    <td>—</td>
+                    <td><code>204 No Content</code></td>
+                    <td>JWT</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>Patients</h4>
+        <table>
+            <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Roles</th></tr></thead>
+            <tbody>
+                <tr><td>GET</td><td><code>/patients</code></td><td>List all patients (paged)</td><td>Reception, Admin</td></tr>
+                <tr><td>GET</td><td><code>/patients/{id}</code></td><td>Get patient by ID</td><td>Reception, Nurse, Doctor, Admin</td></tr>
+                <tr><td>POST</td><td><code>/patients</code></td><td>Register new patient</td><td>Patient (self), Reception</td></tr>
+                <tr><td>PUT</td><td><code>/patients/{id}</code></td><td>Update patient profile</td><td>Reception, Admin</td></tr>
+                <tr><td>DELETE</td><td><code>/patients/{id}</code></td><td>Soft-delete patient record</td><td>Admin</td></tr>
+            </tbody>
+        </table>
+
+        <h4>Symptom Reports</h4>
+        <table>
+            <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Roles</th></tr></thead>
+            <tbody>
+                <tr><td>POST</td><td><code>/symptoms</code></td><td>Submit symptom report → triggers AI scoring</td><td>Patient, Reception</td></tr>
+                <tr><td>GET</td><td><code>/symptoms/{id}</code></td><td>Get symptom report by ID</td><td>Nurse, Doctor, Admin</td></tr>
+                <tr><td>GET</td><td><code>/symptoms/patient/{patientId}</code></td><td>Get all reports for a patient</td><td>Nurse, Doctor, Admin</td></tr>
+            </tbody>
+        </table>
+
+        <h4>Priority Assessments</h4>
+        <table>
+            <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Roles</th></tr></thead>
+            <tbody>
+                <tr><td>GET</td><td><code>/priority/{symptomReportId}</code></td><td>Get AI assessment for a symptom report</td><td>Nurse, Doctor</td></tr>
+                <tr><td>PUT</td><td><code>/priority/{id}/validate</code></td><td>Override AI priority with clinical validation</td><td>Nurse, Doctor</td></tr>
+                <tr><td>GET</td><td><code>/priority/queue</code></td><td>Get current priority-sorted queue</td><td>Doctor, Nurse, Reception</td></tr>
+            </tbody>
+        </table>
+
+        <h4>Appointments</h4>
+        <table>
+            <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Roles</th></tr></thead>
+            <tbody>
+                <tr><td>GET</td><td><code>/appointments</code></td><td>List appointments (filtered by date/doctor/status)</td><td>Reception, Doctor, Admin</td></tr>
+                <tr><td>POST</td><td><code>/appointments</code></td><td>Create appointment</td><td>Reception</td></tr>
+                <tr><td>PUT</td><td><code>/appointments/{id}</code></td><td>Update appointment (reschedule, status change)</td><td>Reception, Doctor</td></tr>
+                <tr><td>DELETE</td><td><code>/appointments/{id}</code></td><td>Cancel appointment</td><td>Reception, Admin</td></tr>
+                <tr><td>GET</td><td><code>/appointments/availability</code></td><td>Get available slots for a doctor and date range</td><td>Reception</td></tr>
+            </tbody>
+        </table>
+
+        <h4>Sample API Request / Response</h4>
+        <p class="muted">POST /api/v1/symptoms — Submit a symptom report and receive an AI priority score</p>
+        <div class="two-col">
+            <div>
+                <p><strong>Request Body</strong></p>
+                <pre>{
+  "patientId": 42,
+  "chiefComplaint": "Severe chest pain",
+  "symptoms": ["chest pain", "shortness of breath", "sweating"],
+  "painLevel": 8,
+  "duration": "30 minutes",
+  "currentMedications": "Aspirin 75mg",
+  "knownAllergies": "Penicillin"
+}</pre>
+            </div>
+            <div>
+                <p><strong>Response Body (201 Created)</strong></p>
+                <pre>{
+  "symptomReportId": 105,
+  "assessment": {
+    "aiScore": 91.4,
+    "priorityLevel": "Emergency",
+    "confidence": 0.96,
+    "recommendedDepartment": "Cardiology",
+    "reasoning": "High-severity chest pain with
+    respiratory symptoms; cardiac event
+    cannot be excluded."
+  }
+}</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 5.3 Data Flow ── -->
+    <div id="data-flow" style="margin-top: 36px;">
+        <h3>5.3 Data Flow</h3>
+
+        <h4>Primary Flow: Patient Symptom Submission → Appointment</h4>
+        <div class="flow">
+            <div class="flow-step">
+                <div class="flow-step-connector">
+                    <div class="flow-step-dot">1</div>
+                    <div class="flow-step-line"></div>
+                </div>
+                <div class="flow-step-content">
+                    <strong>Patient submits symptom form (Angular Frontend)</strong>
+                    Patient fills in the structured intake form (chief complaint, symptoms, pain level, duration, medications, allergies) and clicks Submit.
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-step-connector">
+                    <div class="flow-step-dot">2</div>
+                    <div class="flow-step-line"></div>
+                </div>
+                <div class="flow-step-content">
+                    <strong>API receives and validates the request (POST /symptoms)</strong>
+                    The backend validates the payload (model validation + JWT auth check). A new <code>SymptomReport</code> record is persisted to the database.
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-step-connector">
+                    <div class="flow-step-dot">3</div>
+                    <div class="flow-step-line"></div>
+                </div>
+                <div class="flow-step-content">
+                    <strong>AI Priority Service is invoked (Infrastructure Layer)</strong>
+                    <code>ISymptomAnalysisService.AnalyzeSymptomsAsync()</code> forwards symptom data to the configured AI provider (OpenAI / Azure / ML.NET) and receives a structured JSON response containing the urgency score, priority level, confidence, and department routing.
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-step-connector">
+                    <div class="flow-step-dot">4</div>
+                    <div class="flow-step-line"></div>
+                </div>
+                <div class="flow-step-content">
+                    <strong>PriorityAssessment is persisted and returned</strong>
+                    The assessment result is saved to the <code>PriorityAssessments</code> table and linked to the <code>SymptomReport</code>. The combined response is returned to the frontend.
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-step-connector">
+                    <div class="flow-step-dot">5</div>
+                    <div class="flow-step-line"></div>
+                </div>
+                <div class="flow-step-content">
+                    <strong>Nurse/Doctor validates priority (Optional clinical override)</strong>
+                    Clinical staff review the AI score in the dashboard. If they disagree, they submit a validated priority via <code>PUT /priority/{id}/validate</code>. The override is logged with the validator's identity and timestamp.
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-step-connector">
+                    <div class="flow-step-dot">6</div>
+                    <div class="flow-step-line"></div>
+                </div>
+                <div class="flow-step-content">
+                    <strong>Appointment is scheduled (POST /appointments)</strong>
+                    Reception staff (or the system automatically) creates an appointment using the effective priority score to select the earliest available slot with the appropriate doctor/department.
+                </div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-step-connector">
+                    <div class="flow-step-dot">7</div>
+                </div>
+                <div class="flow-step-content">
+                    <strong>Patient receives notification</strong>
+                    <code>INotificationService</code> dispatches an email/SMS confirmation with appointment date, time, doctor name, and priority level.
+                </div>
+            </div>
+        </div>
+
+        <h4>Database Entity Relationships</h4>
+        <table>
+            <thead><tr><th>Table</th><th>Key Fields</th><th>Relationships</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><strong>Users</strong></td>
+                    <td>Id, Email, PasswordHash, Role</td>
+                    <td>One-to-one with Patients / Doctors</td>
+                </tr>
+                <tr>
+                    <td><strong>Patients</strong></td>
+                    <td>Id, FirstName, LastName, DOB, ContactInfo</td>
+                    <td>One-to-many → SymptomReports, Appointments</td>
+                </tr>
+                <tr>
+                    <td><strong>SymptomReports</strong></td>
+                    <td>Id, PatientId, Symptoms, PainLevel, Duration, SubmittedAt</td>
+                    <td>Many-to-one → Patients; One-to-one → PriorityAssessments</td>
+                </tr>
+                <tr>
+                    <td><strong>PriorityAssessments</strong></td>
+                    <td>Id, SymptomReportId, AIScore, PriorityLevel, Confidence, ValidatedBy</td>
+                    <td>One-to-one → SymptomReports</td>
+                </tr>
+                <tr>
+                    <td><strong>Appointments</strong></td>
+                    <td>Id, PatientId, DoctorId, DateTime, Status, PriorityLevel</td>
+                    <td>Many-to-one → Patients; Many-to-one → Doctors</td>
+                </tr>
+                <tr>
+                    <td><strong>Doctors</strong></td>
+                    <td>Id, UserId, Specialization, AvailabilitySchedule</td>
+                    <td>One-to-many → Appointments</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── 5.4 Error Handling ── -->
+    <div id="error-handling" style="margin-top: 36px;">
+        <h3>5.4 Error Handling</h3>
+
+        <h4>HTTP Error Response Format</h4>
+        <p>All API errors return a consistent JSON envelope:</p>
+        <pre>{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "PainLevel must be between 0 and 10.",
+  "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "timestamp": "2026-04-22T10:30:00Z"
+}</pre>
+
+        <h4>Error Categories &amp; Strategies</h4>
+        <table>
+            <thead>
+                <tr><th>Category</th><th>HTTP Status</th><th>Handling Strategy</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Validation Errors</strong></td>
+                    <td>400 Bad Request</td>
+                    <td>ASP.NET Core Model Validation returns field-level error details. Angular Reactive Forms display inline validation messages before submission.</td>
+                </tr>
+                <tr>
+                    <td><strong>Authentication Failure</strong></td>
+                    <td>401 Unauthorised</td>
+                    <td>Invalid or expired JWT. Angular HttpInterceptor auto-refreshes the token once; on second failure, redirects to login.</td>
+                </tr>
+                <tr>
+                    <td><strong>Authorisation Failure</strong></td>
+                    <td>403 Forbidden</td>
+                    <td>User role does not permit the action. Angular route guards prevent navigation; API returns 403 as fallback.</td>
+                </tr>
+                <tr>
+                    <td><strong>Resource Not Found</strong></td>
+                    <td>404 Not Found</td>
+                    <td>Returned when a requested patient, appointment, or report ID does not exist.</td>
+                </tr>
+                <tr>
+                    <td><strong>Business Logic Errors</strong></td>
+                    <td>422 Unprocessable Entity</td>
+                    <td>E.g., scheduling a slot already booked. Returns descriptive message; frontend shows user-friendly dialog.</td>
+                </tr>
+                <tr>
+                    <td><strong>AI Service Failure</strong></td>
+                    <td>503 Service Unavailable</td>
+                    <td>
+                        <ol>
+                            <li>Retry up to 3 times with exponential back-off.</li>
+                            <li>On persistent failure, fall back to the rule-based <code>PriorityCalculationService</code>.</li>
+                            <li>Flag the assessment as <em>AI-unavailable</em>; alert clinical staff to manually validate.</li>
+                        </ol>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Database Errors</strong></td>
+                    <td>500 Internal Server Error</td>
+                    <td>EF Core exceptions caught in global middleware. Full stack trace logged to application logs (never exposed to client). Friendly generic message returned.</td>
+                </tr>
+                <tr>
+                    <td><strong>Unhandled Exceptions</strong></td>
+                    <td>500 Internal Server Error</td>
+                    <td>Global exception middleware catches all unhandled exceptions, logs with correlation ID, and returns the standard error envelope.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>Global Exception Middleware (ASP.NET Core)</h4>
+        <pre>public class GlobalExceptionMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger&lt;GlobalExceptionMiddleware&gt; _logger;
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
+        {
+            await _next(context);
+        }
+        catch (ValidationException ex)
+        {
+            await WriteErrorResponse(context, 400, ex.Message);
+        }
+        catch (NotFoundException ex)
+        {
+            await WriteErrorResponse(context, 404, ex.Message);
+        }
+        catch (AIServiceException ex)
+        {
+            _logger.LogError(ex, "AI service unavailable – falling back to rule-based scoring");
+            await WriteErrorResponse(context, 503, "Priority service temporarily unavailable. Manual review required.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled exception");
+            await WriteErrorResponse(context, 500, "An unexpected error occurred.");
+        }
+    }
+}</pre>
+
+        <div class="card card-yellow" style="margin-top:16px;">
+            <h4>AI Fallback Strategy</h4>
+            <p>
+                When the external AI provider is unreachable, the system automatically falls back to the
+                <strong>rule-based <code>PriorityCalculationService</code></strong>, which computes a score using
+                weighted factors: symptom severity (40%), pain level (30%), duration (20%), and age (10%).
+                The resulting <code>PriorityAssessment</code> is flagged as <code>Source = "RuleEngine"</code>
+                so clinical staff know that AI confidence is not available and manual validation is required.
+            </p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════ 6. ASSUMPTIONS & LIMITATIONS ════════════════════════ -->
+<div class="section" id="assumptions">
+    <div class="section-title">
+        <div class="num">6</div>
+        Assumptions &amp; Limitations
+    </div>
+
+    <h3>Assumptions</h3>
+    <table>
+        <thead><tr><th>#</th><th>Assumption</th></tr></thead>
+        <tbody>
+            <tr><td>A1</td><td>All users access the application via a modern web browser; no native mobile client is in scope for this phase.</td></tr>
+            <tr><td>A2</td><td>Patients are capable of self-reporting symptoms digitally or are assisted by reception staff.</td></tr>
+            <tr><td>A3</td><td>An active internet connection is available for AI API calls to OpenAI or Azure Cognitive Services.</td></tr>
+            <tr><td>A4</td><td>The hospital has a SQL Server or MySQL instance available for deployment.</td></tr>
+            <tr><td>A5</td><td>Initial priority scoring thresholds are defined by a clinical subject matter expert before go-live.</td></tr>
+            <tr><td>A6</td><td>Doctors operate on a fixed weekly schedule that is configured in the system; ad-hoc availability changes are handled manually by reception.</td></tr>
+            <tr><td>A7</td><td>The AI model will receive structured, text-based symptom inputs; voice or image-based diagnosis is out of scope.</td></tr>
+            <tr><td>A8</td><td>No formal HL7 FHIR integration with an existing Hospital Management System (HMS) is required in this phase.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Limitations</h3>
+    <table>
+        <thead><tr><th>#</th><th>Limitation</th><th>Mitigation</th></tr></thead>
+        <tbody>
+            <tr>
+                <td>L1</td>
+                <td>AI scoring accuracy depends on the quality and completeness of patient-entered symptom data.</td>
+                <td>Mandatory fields and structured input forms reduce free-text ambiguity. Nurse validation step acts as a clinical safety net.</td>
+            </tr>
+            <tr>
+                <td>L2</td>
+                <td>The AI provider (OpenAI / Azure) is an external dependency; service outages affect real-time scoring.</td>
+                <td>Rule-based fallback ensures the system continues to function and assign a priority score under degraded conditions.</td>
+            </tr>
+            <tr>
+                <td>L3</td>
+                <td>The system does not replace clinical judgment; it provides decision support only.</td>
+                <td>All AI assessments include a confidence score and a mandatory clinical validation step before high-stakes scheduling decisions.</td>
+            </tr>
+            <tr>
+                <td>L4</td>
+                <td>Real-time notifications require an SMTP/SMS gateway configuration that depends on the deployment environment.</td>
+                <td>Notification service is abstracted behind <code>INotificationService</code>; can be swapped with any provider without system-wide changes.</td>
+            </tr>
+            <tr>
+                <td>L5</td>
+                <td>Initial ML.NET model training requires historical labelled patient data that may not be immediately available.</td>
+                <td>System starts with OpenAI/Azure integration; ML.NET custom model is an enhancement for a later phase.</td>
+            </tr>
+            <tr>
+                <td>L6</td>
+                <td>Full HIPAA / PDPA compliance audit is beyond the scope of this internship project.</td>
+                <td>Core security controls (JWT, HTTPS, data encryption, access control, audit logging) are implemented as a baseline. A formal compliance review is recommended before production deployment.</td>
+            </tr>
+            <tr>
+                <td>L7</td>
+                <td>The system is designed for single-hospital deployment; multi-tenancy is not supported in this version.</td>
+                <td>Architecture uses schema isolation in the database; multi-tenant support can be added in a future phase with tenant-based routing.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+</div><!-- end .page -->
+
+<footer>
+    AI Patient Appointment Prioritization System &nbsp;|&nbsp; Design Document v1.0 &nbsp;|&nbsp; April 22, 2026 &nbsp;|&nbsp; Confidential – Internal Use Only
+</footer>
+
+</body>
+</html>

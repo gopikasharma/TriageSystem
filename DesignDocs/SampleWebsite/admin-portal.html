@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel – AI Patient Prioritization System</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        :root {
+            --primary:#b03a2e; --secondary:#c0392b; --accent:#e74c3c;
+            --sidebar-bg:#1a0f0f; --bg:#f0f4f8; --card:#fff;
+            --border:#e0e6ed; --text:#2c3e50; --muted:#7f8c8d;
+            --danger:#e74c3c; --warning:#e67e22; --success:#27ae60; --info:#3498db;
+        }
+        body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; min-height:100vh; }
+        .topbar { background:#7b241c; color:#fff; height:58px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:200; box-shadow:0 2px 10px rgba(0,0,0,0.25); }
+        .topbar-brand { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; }
+        .topbar-right { display:flex; align-items:center; gap:16px; font-size:13px; }
+        .topbar-right a { color:rgba(255,255,255,0.8); text-decoration:none; font-size:12px; }
+        .user-pill { background:rgba(255,255,255,0.15); border-radius:20px; padding:6px 16px; font-size:13px; }
+        .app-body { display:flex; flex:1; }
+        .sidebar { width:230px; background:var(--sidebar-bg); display:flex; flex-direction:column; flex-shrink:0; position:sticky; top:58px; height:calc(100vh - 58px); overflow-y:auto; }
+        .sidebar-nav { flex:1; padding:20px 0; }
+        .nav-section { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#3a1a1a; padding:16px 20px 6px; }
+        .nav-item { display:flex; align-items:center; gap:12px; padding:11px 20px; font-size:13.5px; border-left:3px solid transparent; transition:all 0.15s; color:#8a6a6a; text-decoration:none; }
+        .nav-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+        .nav-item.active { background:rgba(231,76,60,0.2); color:#fff; border-left-color:#e74c3c; }
+        .nav-icon { font-size:16px; width:20px; text-align:center; }
+        .sidebar-footer { padding:16px 20px; border-top:1px solid rgba(255,255,255,0.07); font-size:12px; color:#3a1a1a; }
+        .main { flex:1; padding:28px 32px; overflow-y:auto; }
+        .page-title { font-size:22px; font-weight:700; color:#7b241c; margin-bottom:4px; }
+        .page-sub   { font-size:13px; color:var(--muted); margin-bottom:28px; }
+
+        /* Stat cards row */
+        .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:18px; margin-bottom:28px; }
+        .stat-card { background:var(--card); border-radius:12px; padding:20px 22px; border:1px solid var(--border); }
+        .s-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+        .stat-icon { font-size:26px; }
+        .stat-val { font-size:28px; font-weight:800; }
+        .stat-lbl { font-size:12px; color:var(--muted); margin-top:3px; }
+
+        /* Health indicators */
+        .health-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
+        .health-item { background:var(--card); border-radius:10px; padding:16px 18px; border:1px solid var(--border); display:flex; align-items:center; gap:14px; }
+        .health-dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+        .hd-green  { background:var(--success); box-shadow:0 0 6px rgba(39,174,96,0.5); }
+        .hd-yellow { background:var(--warning); box-shadow:0 0 6px rgba(230,126,34,0.5); }
+        .hd-red    { background:var(--danger);  box-shadow:0 0 6px rgba(231,76,60,0.5); }
+        .health-label { font-size:13px; font-weight:600; }
+        .health-sub   { font-size:11px; color:var(--muted); margin-top:2px; }
+
+        .card { background:var(--card); border-radius:12px; padding:24px 26px; border:1px solid var(--border); margin-bottom:24px; }
+        .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:8px; }
+        .card-title { font-size:16px; font-weight:700; color:#7b241c; display:flex; align-items:center; gap:8px; }
+
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th,td { padding:11px 14px; text-align:left; border-bottom:1px solid var(--border); vertical-align:middle; }
+        th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; background:#fafbfc; }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:#f7f9fc; }
+
+        .badge { display:inline-block; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700; }
+        .badge-admin     { background:#fdedec; color:#b03a2e; }
+        .badge-doctor    { background:#eaf0fb; color:#1a5276; }
+        .badge-nurse     { background:#fef5e7; color:#d35400; }
+        .badge-reception { background:#f5eef8; color:#6c3483; }
+        .badge-patient   { background:#eafaf1; color:#1a7a45; }
+        .badge-active    { background:#eafaf1; color:#1a7a45; }
+        .badge-inactive  { background:#f2f3f4; color:#7f8c8d; }
+        .badge-suspended { background:#fdf2f2; color:#c0392b; }
+
+        .action-btn { padding:4px 10px; border-radius:5px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid transparent; font-family:inherit; margin-right:4px; }
+        .btn-edit    { background:#eaf0fb; color:#1a5276; border-color:#d0e3f5; }
+        .btn-suspend { background:#fef5e7; color:#d35400; border-color:#fdebd0; }
+        .btn-delete  { background:#fdf2f2; color:#c0392b; border-color:#f5b7b1; }
+
+        /* Audit log */
+        .audit-item { display:flex; gap:14px; padding:11px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
+        .audit-item:last-child { border-bottom:none; }
+        .audit-icon { font-size:18px; flex-shrink:0; width:28px; text-align:center; }
+        .audit-text { flex:1; font-size:13px; line-height:1.5; }
+        .audit-text span { color:var(--muted); font-size:11px; display:block; margin-top:2px; }
+        .audit-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px; flex-shrink:0; }
+        .ab-create  { background:#eafaf1; color:#1a7a45; }
+        .ab-update  { background:#eaf0fb; color:#1a5276; }
+        .ab-delete  { background:#fdf2f2; color:#c0392b; }
+        .ab-auth    { background:#f5eef8; color:#6c3483; }
+        .ab-ai      { background:#fef5e7; color:#d35400; }
+
+        /* Two column */
+        .two-col { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+        .form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+        label { font-size:12px; font-weight:600; color:var(--text); }
+        input,select,textarea { border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:13px; font-family:inherit; color:var(--text); background:#fff; width:100%; }
+        input:focus,select:focus,textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(231,76,60,0.1); }
+        .btn { padding:10px 22px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; font-family:inherit; }
+        .btn-primary { background:#7b241c; color:#fff; }
+        .btn-primary:hover { background:#641e16; }
+        .btn-row { display:flex; gap:12px; margin-top:4px; }
+
+        /* Usage bar */
+        .usage-row { display:flex; align-items:center; gap:12px; margin:10px 0; font-size:13px; }
+        .usage-label { min-width:140px; color:var(--muted); }
+        .usage-track { flex:1; background:#ecf0f1; border-radius:4px; height:8px; }
+        .usage-fill  { height:8px; border-radius:4px; }
+        .usage-pct { min-width:36px; text-align:right; font-weight:700; font-size:12px; }
+
+        @media(max-width:900px) { .two-col { grid-template-columns:1fr; } }
+        @media(max-width:768px) { .sidebar { display:none; } .main { padding:18px; } }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-brand">⚙️ <span>Admin Panel</span></div>
+    <div class="topbar-right">
+        <span>🕐 10:25 AM, Apr 22, 2026</span>
+        <div class="user-pill">⚙️ Admin – Vikram S.</div>
+        <a href="index.html">← All Portals</a>
+    </div>
+</div>
+
+<div class="app-body">
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <div class="nav-section">Admin Menu</div>
+            <a href="#dashboard"   class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</a>
+            <a href="#users"       class="nav-item"><span class="nav-icon">👥</span> User Management</a>
+            <a href="#health"      class="nav-item"><span class="nav-icon">💚</span> System Health</a>
+            <a href="#ai"          class="nav-item"><span class="nav-icon">🤖</span> AI Configuration</a>
+            <a href="#categories"  class="nav-item"><span class="nav-icon">📂</span> Category Questions</a>
+            <div class="nav-section">Reports</div>
+            <a href="#audit"       class="nav-item"><span class="nav-icon">📋</span> Audit Logs</a>
+            <a href="#reports"     class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+            <div class="nav-section">System</div>
+            <a href="#settings"    class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+            <a href="#backup"      class="nav-item"><span class="nav-icon">💾</span> Backup</a>
+        </nav>
+        <div class="sidebar-footer">Admin Panel v1.0</div>
+    </aside>
+
+    <main class="main">
+        <div id="dashboard">
+        <div class="page-title">System Administration</div>
+        <div class="page-sub">Full system control and monitoring — Wednesday, April 22, 2026</div>
+
+        <!-- Stats -->
+        <div class="stat-row">
+            <div class="stat-card">
+                <div class="s-top"><div class="stat-icon">👥</div></div>
+                <div class="stat-val" style="color:#1a5276">54</div>
+                <div class="stat-lbl">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="s-top"><div class="stat-icon">🟢</div></div>
+                <div class="stat-val" style="color:var(--success)">28</div>
+                <div class="stat-lbl">Active Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="s-top"><div class="stat-icon">🤖</div></div>
+                <div class="stat-val" style="color:var(--warning)">92%</div>
+                <div class="stat-lbl">AI Accuracy</div>
+            </div>
+            <div class="stat-card">
+                <div class="s-top"><div class="stat-icon">⏱️</div></div>
+                <div class="stat-val" style="color:var(--success)">99.8%</div>
+                <div class="stat-lbl">System Uptime</div>
+            </div>
+        </div>
+
+        <!-- System Health -->
+        <div id="health" class="card">
+            <div class="card-title">💚 System Health</div>
+            <div class="health-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+                <div class="health-item">
+                    <div class="health-dot hd-green"></div>
+                    <div><div class="health-label">API Server</div><div class="health-sub">Running · ASP.NET Core</div></div>
+                </div>
+                <div class="health-item">
+                    <div class="health-dot hd-green"></div>
+                    <div><div class="health-label">Database</div><div class="health-sub">Online · MS SQL Server</div></div>
+                </div>
+                <div class="health-item">
+                    <div class="health-dot hd-green"></div>
+                    <div><div class="health-label">Angular Frontend</div><div class="health-sub">Serving · Port 4200</div></div>
+                </div>
+                <div class="health-item">
+                    <div class="health-dot hd-yellow"></div>
+                    <div><div class="health-label">AI Service (OpenAI)</div><div class="health-sub">High latency · ~2.8s avg</div></div>
+                </div>
+                <div class="health-item">
+                    <div class="health-dot hd-green"></div>
+                    <div><div class="health-label">Redis Cache</div><div class="health-sub">Operational · 12ms</div></div>
+                </div>
+                <div class="health-item">
+                    <div class="health-dot hd-green"></div>
+                    <div><div class="health-label">Email/SMS Notifications</div><div class="health-sub">Active · SMTP + Twilio</div></div>
+                </div>
+            </div>
+            <div class="stat-lbl" style="margin-bottom:10px;font-size:13px;font-weight:600;color:var(--text)">Resource Usage</div>
+            <div class="usage-row">
+                <span class="usage-label">CPU Usage</span>
+                <div class="usage-track"><div class="usage-fill" style="width:38%;background:#3498db"></div></div>
+                <span class="usage-pct" style="color:#3498db">38%</span>
+            </div>
+            <div class="usage-row">
+                <span class="usage-label">Memory (RAM)</span>
+                <div class="usage-track"><div class="usage-fill" style="width:62%;background:#e67e22"></div></div>
+                <span class="usage-pct" style="color:#e67e22">62%</span>
+            </div>
+            <div class="usage-row">
+                <span class="usage-label">Database Storage</span>
+                <div class="usage-track"><div class="usage-fill" style="width:24%;background:#27ae60"></div></div>
+                <span class="usage-pct" style="color:#27ae60">24%</span>
+            </div>
+            <div class="usage-row">
+                <span class="usage-label">API Requests / min</span>
+                <div class="usage-track"><div class="usage-fill" style="width:55%;background:#8e44ad"></div></div>
+                <span class="usage-pct" style="color:#8e44ad">142</span>
+            </div>
+        </div>
+
+        <!-- User Management -->
+        <div id="users" class="card">
+            <div class="card-header">
+                <div class="card-title">👥 User Management</div>
+                <button class="btn btn-primary" onclick="alert('➕ Add New User form opened.\n\nFill in: Name, Email, Role, Department, Password')">+ Add User</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Last Login</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong>Vikram S.</strong></td>
+                        <td>vikram@hospital.com</td>
+                        <td><span class="badge badge-admin">Admin</span></td>
+                        <td>IT / Administration</td>
+                        <td>Today, 10:10 AM</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="alert('Editing Vikram S. profile…')">Edit</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>Dr. Sarah Johnson</strong></td>
+                        <td>sarah.j@hospital.com</td>
+                        <td><span class="badge badge-doctor">Doctor</span></td>
+                        <td>Cardiology</td>
+                        <td>Today, 08:20 AM</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="alert('Editing Dr. Sarah Johnson profile…')">Edit</button>
+                            <button class="action-btn btn-suspend" onclick="alert('Are you sure you want to suspend Dr. Sarah Johnson?')">Suspend</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><strong>Dr. Michael Chen</strong></td>
+                        <td>michael.c@hospital.com</td>
+                        <td><span class="badge badge-doctor">Doctor</span></td>
+                        <td>General Medicine</td>
+                        <td>Today, 09:05 AM</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="alert('Editing Dr. Michael Chen…')">Edit</button>
+                            <button class="action-btn btn-suspend" onclick="alert('Suspend Dr. Michael Chen?')">Suspend</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><strong>Nurse Rani</strong></td>
+                        <td>rani.n@hospital.com</td>
+                        <td><span class="badge badge-nurse">Nurse</span></td>
+                        <td>Triage / Emergency</td>
+                        <td>Today, 08:00 AM</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="alert('Editing Nurse Rani…')">Edit</button>
+                            <button class="action-btn btn-suspend" onclick="alert('Suspend Nurse Rani?')">Suspend</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><strong>Meera (Reception)</strong></td>
+                        <td>meera.r@hospital.com</td>
+                        <td><span class="badge badge-reception">Reception</span></td>
+                        <td>Front Desk</td>
+                        <td>Today, 09:30 AM</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="alert('Editing Meera profile…')">Edit</button>
+                            <button class="action-btn btn-suspend" onclick="alert('Suspend Meera?')">Suspend</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><strong>Priya Sharma</strong></td>
+                        <td>priya.sh@email.com</td>
+                        <td><span class="badge badge-patient">Patient</span></td>
+                        <td>—</td>
+                        <td>Today, 07:55 AM</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="alert('Editing Priya Sharma account…')">Edit</button>
+                            <button class="action-btn btn-delete" onclick="alert('⚠️ Delete patient account? This action is irreversible.')">Delete</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td><strong>Old Staff</strong></td>
+                        <td>oldstaff@hospital.com</td>
+                        <td><span class="badge badge-reception">Reception</span></td>
+                        <td>Front Desk</td>
+                        <td>Mar 12, 2026</td>
+                        <td><span class="badge badge-suspended">Suspended</span></td>
+                        <td>
+                            <button class="action-btn btn-edit" onclick="alert('Re-activating account…')">Reactivate</button>
+                            <button class="action-btn btn-delete" onclick="alert('⚠️ Permanently delete this account?')">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- AI Config + Audit Logs -->
+        <div class="two-col">
+
+            <!-- AI Configuration -->
+            <div id="ai" class="card">
+                <div class="card-title">🤖 AI Configuration</div>
+                <div class="form-group">
+                    <label>AI Provider</label>
+                    <select>
+                        <option selected>OpenAI GPT-4 (Active)</option>
+                        <option>Azure Cognitive Services</option>
+                        <option>ML.NET Custom Model</option>
+                        <option>Rule-Based Fallback Only</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Emergency Threshold Score (auto-escalate)</label>
+                    <input type="number" value="80" min="70" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Minimum Confidence to Auto-Schedule</label>
+                    <input type="number" value="85" min="50" max="100">
+                </div>
+                <div class="form-group">
+                    <label>AI Fallback Mode</label>
+                    <select>
+                        <option selected>Rule-Based Scoring (automatic fallback)</option>
+                        <option>Manual Triage Only</option>
+                        <option>Queue and Wait for AI</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Model Last Retrained</label>
+                    <input type="text" value="April 18, 2026 – 92.1% test accuracy" readonly style="background:#f8f9fa;color:var(--muted)">
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="alert('✅ AI configuration saved successfully!')">Save Config</button>
+                    <button onclick="alert('🔄 Retraining model with latest validated data…\nEstimated time: 15 minutes')" style="padding:10px 18px;background:#fef5e7;color:#b7510e;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Retrain Model</button>
+                </div>
+            </div>
+
+            <!-- Audit Logs -->
+            <div id="audit" class="card">
+                <div class="card-title">📋 Recent Audit Log</div>
+                <div class="audit-item">
+                    <div class="audit-icon">✅</div>
+                    <div class="audit-text">
+                        <strong>Priority Validated</strong> — Nurse Rani validated AI score (91 → Emergency) for Ravi Kumar.
+                        <span>10:08 AM · nurse.rani · IP: 192.168.1.42</span>
+                    </div>
+                    <div class="audit-badge ab-update">UPDATE</div>
+                </div>
+                <div class="audit-item">
+                    <div class="audit-icon">🔐</div>
+                    <div class="audit-text">
+                        <strong>User Login</strong> — Dr. Sarah Johnson logged in successfully.
+                        <span>08:20 AM · sarah.j · IP: 192.168.1.55</span>
+                    </div>
+                    <div class="audit-badge ab-auth">AUTH</div>
+                </div>
+                <div class="audit-item">
+                    <div class="audit-icon">🤖</div>
+                    <div class="audit-text">
+                        <strong>AI Override</strong> — Nurse Rani overrode AI score: Latha M. from Medium (52) → Low (28).
+                        <span>08:05 AM · nurse.rani · AI Model: GPT-4</span>
+                    </div>
+                    <div class="audit-badge ab-ai">AI</div>
+                </div>
+                <div class="audit-item">
+                    <div class="audit-icon">➕</div>
+                    <div class="audit-text">
+                        <strong>Patient Registered</strong> — Meera registered new patient: Mohammed Ali (P-1056).
+                        <span>09:50 AM · meera.r · Reception Portal</span>
+                    </div>
+                    <div class="audit-badge ab-create">CREATE</div>
+                </div>
+                <div class="audit-item">
+                    <div class="audit-icon">📅</div>
+                    <div class="audit-text">
+                        <strong>Appointment Scheduled</strong> — Priya Sharma (P-1028) scheduled for Apr 22 at 3:30 PM with Dr. Johnson.
+                        <span>09:12 AM · meera.r · Auto-priority: Medium</span>
+                    </div>
+                    <div class="audit-badge ab-create">CREATE</div>
+                </div>
+                <div class="audit-item">
+                    <div class="audit-icon">🚨</div>
+                    <div class="audit-text">
+                        <strong>Emergency Escalation</strong> — Suresh B. escalated to Emergency Department by Nurse Rani.
+                        <span>08:45 AM · nurse.rani · AI Score: 88</span>
+                    </div>
+                    <div class="audit-badge ab-update">ESCALATE</div>
+                </div>
+                <div style="margin-top:16px;text-align:center">
+                    <button onclick="alert('Full audit log viewer loading…\nLast 500 entries available for export.');" style="background:#f0f4f8;color:var(--text);border:1px solid var(--border);padding:8px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">View Full Log →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ CATEGORY QUESTIONS MANAGEMENT ══ -->
+        <div id="categories" class="card" style="margin-top:8px">
+            <div class="card-header">
+                <div class="card-title">📂 Category Question Bank Management</div>
+                <button class="btn btn-primary" onclick="alert('➕ Add New Category form opened.\n\nFill in:\n• Category Name\n• Department Icon\n• Assign Doctors\n• Then add clinical intake questions below')">+ Add Category</button>
+            </div>
+
+            <!-- Explanation banner -->
+            <div style="background:#f0f9ff;border:1px solid #bee3f8;border-radius:8px;padding:14px 18px;font-size:13px;color:#1a5276;margin-bottom:22px">
+                <strong>ℹ️ How this works:</strong><br><br>
+                <strong>Admin defines questions here → Questions are stored against the category → When patient selects that category during booking, these questions automatically load in Step 3 → Patient answers → AI scores the answers to assign priority.</strong>
+                <br><br>
+                Each question has an <strong>AI Weight</strong> — this tells the AI how much importance to give that answer when calculating the priority score. Higher weight = more impact on urgency.
+            </div>
+
+            <!-- Category selector -->
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
+                <label style="font-size:13px;font-weight:600;color:var(--text)">Select Category to Manage:</label>
+                <select id="admin-cat-select" onchange="showCatQuestions()" style="border:1px solid var(--border);border-radius:8px;padding:9px 14px;font-size:13px;min-width:200px">
+                    <option value="">— Select a Category —</option>
+                    <option>Cardiology</option>
+                    <option>Neurology</option>
+                    <option>Gastroenterology</option>
+                    <option>Orthopaedics</option>
+                    <option>Pulmonology</option>
+                    <option>Endocrinology</option>
+                    <option>General Medicine</option>
+                    <option>Dermatology</option>
+                </select>
+            </div>
+
+            <!-- Questions table (shown after selecting category) -->
+            <div id="cat-questions-panel" style="display:none">
+                <div id="cat-q-header" style="font-size:15px;font-weight:700;color:#7b241c;margin-bottom:14px"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Question</th>
+                            <th>Answer Type</th>
+                            <th>AI Weight</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cat-q-body"></tbody>
+                </table>
+                <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+                    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">➕ Add New Question to this Category</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                        <div class="form-group">
+                            <label>Question Text *</label>
+                            <input type="text" id="new-q-text" placeholder="e.g. Do you have pain radiating to your arm?">
+                        </div>
+                        <div class="form-group">
+                            <label>Answer Type</label>
+                            <select id="new-q-type">
+                                <option value="yesno">Yes / No</option>
+                                <option value="select">Multiple Choice (dropdown)</option>
+                                <option value="text">Free Text</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>AI Weight <span style="color:var(--muted);font-weight:400">(0.05 = low impact · 0.35 = high impact)</span></label>
+                            <input type="number" id="new-q-weight" value="0.15" min="0.05" max="0.35" step="0.05">
+                        </div>
+                        <div class="form-group">
+                            <label>Options <span style="color:var(--muted);font-weight:400">(for Multiple Choice, comma separated)</span></label>
+                            <input type="text" id="new-q-options" placeholder="Option A, Option B, Option C">
+                        </div>
+                    </div>
+                    <div style="margin-top:12px">
+                        <button class="btn btn-primary" onclick="addQuestion()">Save Question</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        var adminQuestionDB = {
+            'Cardiology':       [
+                { q:'Does the pain radiate to your arm, jaw, or back?', type:'Yes / No', weight:'25%', active:true },
+                { q:'Are you experiencing shortness of breath?',        type:'Yes / No', weight:'20%', active:true },
+                { q:'Are you sweating unusually or feeling lightheaded?',type:'Yes / No', weight:'20%', active:true },
+                { q:'Do you have a history of high blood pressure?',    type:'Yes / No', weight:'10%', active:true },
+                { q:'Have you had a heart attack or surgery before?',   type:'Yes / No', weight:'15%', active:true },
+                { q:'Are you experiencing palpitations?',               type:'Yes / No', weight:'10%', active:false }
+            ],
+            'Neurology':        [
+                { q:'Are you having difficulty speaking or understanding speech?', type:'Yes / No', weight:'30%', active:true },
+                { q:'Do you have sudden blurred vision or vision loss?',           type:'Yes / No', weight:'25%', active:true },
+                { q:'Do you feel sudden weakness or numbness in limbs?',           type:'Yes / No', weight:'25%', active:true },
+                { q:'How would you describe the headache?',  type:'Multiple Choice', weight:'15%', active:true },
+                { q:'Have you had any seizures or blackouts recently?',            type:'Yes / No', weight:'30%', active:true }
+            ],
+            'General Medicine': [
+                { q:'Do you have fever? If yes, rough temperature?',  type:'Multiple Choice', weight:'20%', active:true },
+                { q:'Do you suspect an infection?',                   type:'Yes / No',        weight:'15%', active:true },
+                { q:'Have you lost appetite recently?',               type:'Yes / No',        weight:'10%', active:true },
+                { q:'Does your family have history of this condition?',type:'Yes / No',       weight:'10%', active:true },
+                { q:'Have you travelled recently (within 2 weeks)?',  type:'Yes / No',        weight:'10%', active:true }
+            ]
+        };
+        var defaultQuestions = [
+            { q:'Please describe your main symptom.',  type:'Free Text',  weight:'30%', active:true },
+            { q:'Are symptoms getting worse over time?',type:'Yes / No',  weight:'20%', active:true }
+        ];
+
+        function showCatQuestions() {
+            var cat = document.getElementById('admin-cat-select').value;
+            if (!cat) { document.getElementById('cat-questions-panel').style.display='none'; return; }
+            var qs = adminQuestionDB[cat] || defaultQuestions;
+            document.getElementById('cat-q-header').innerText = '📂 ' + cat + ' — ' + qs.length + ' clinical questions configured';
+            var html = '';
+            qs.forEach(function(q, i) {
+                html += '<tr>' +
+                    '<td>' + (i+1) + '</td>' +
+                    '<td>' + q.q + '</td>' +
+                    '<td><span style="background:#eaf0fb;color:#1a5276;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600">' + q.type + '</span></td>' +
+                    '<td><strong>' + q.weight + '</strong></td>' +
+                    '<td>' + (q.active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive" style="background:#f2f3f4;color:#7f8c8d">Inactive</span>') + '</td>' +
+                    '<td>' +
+                    '<button class="action-btn btn-edit" onclick="alert(\'Editing question: ' + q.q.replace(/'/g,"\\'") + '\')">Edit</button>' +
+                    '<button class="action-btn btn-delete" onclick="alert(\'Delete this question?\')">Delete</button>' +
+                    '</td></tr>';
+            });
+            document.getElementById('cat-q-body').innerHTML = html;
+            document.getElementById('cat-questions-panel').style.display = 'block';
+        }
+
+        function addQuestion() {
+            var text = document.getElementById('new-q-text').value.trim();
+            if (!text) { alert('Please enter the question text.'); return; }
+            var type   = document.getElementById('new-q-type').value;
+            var weight = document.getElementById('new-q-weight').value;
+            var cat    = document.getElementById('admin-cat-select').value;
+            alert('✅ Question saved!\n\nCategory: ' + cat + '\nQuestion: ' + text + '\nType: ' + type + '\nAI Weight: ' + (weight * 100) + '%\n\nThis question will now appear in Step 3 when patients book a ' + cat + ' appointment.');
+            document.getElementById('new-q-text').value = '';
+            showCatQuestions();
+        }
+        </script>
+
+        </div>
+    </main>
+</div>
+
+</body>
+</html>

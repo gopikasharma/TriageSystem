@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Portal – AI Patient Prioritization System</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary:#2c5aa0; --secondary:#3498db; --accent:#27ae60;
+            --sidebar-bg:#1a2a4a; --header-bg:#fff;
+            --bg:#f0f4f8; --card:#fff; --border:#e0e6ed;
+            --text:#2c3e50; --muted:#7f8c8d;
+            --danger:#e74c3c; --warning:#e67e22; --success:#27ae60;
+        }
+        body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; min-height:100vh; }
+
+        /* Header */
+        .topbar {
+            background:var(--primary); color:#fff;
+            height:58px; display:flex; align-items:center; justify-content:space-between;
+            padding:0 24px; position:sticky; top:0; z-index:200;
+            box-shadow:0 2px 10px rgba(0,0,0,0.2);
+        }
+        .topbar-brand { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; }
+        .topbar-right { display:flex; align-items:center; gap:16px; font-size:13px; }
+        .topbar-right a { color:rgba(255,255,255,0.8); text-decoration:none; font-size:12px; }
+        .topbar-right a:hover { color:#fff; }
+        .user-pill {
+            background:rgba(255,255,255,0.15); border-radius:20px;
+            padding:6px 14px; display:flex; align-items:center; gap:8px; font-size:13px;
+        }
+        .notif { background:var(--danger); color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+
+        /* Layout */
+        .app-body { display:flex; flex:1; }
+
+        /* Sidebar */
+        .sidebar {
+            width:220px; background:var(--sidebar-bg); color:#b0bec5;
+            display:flex; flex-direction:column; flex-shrink:0;
+            position:sticky; top:58px; height:calc(100vh - 58px); overflow-y:auto;
+        }
+        .sidebar-nav { flex:1; padding:20px 0; }
+        .nav-section { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:#4a5e7a; padding:16px 20px 6px; }
+        .nav-item {
+            display:flex; align-items:center; gap:12px;
+            padding:11px 20px; font-size:13.5px; cursor:pointer;
+            border-left:3px solid transparent; transition:all 0.15s;
+            color:#8fa8c2; text-decoration:none;
+        }
+        .nav-item:hover { background:rgba(255,255,255,0.06); color:#fff; }
+        .nav-item.active { background:rgba(52,152,219,0.15); color:#fff; border-left-color:var(--secondary); }
+        .nav-icon { font-size:16px; width:20px; text-align:center; }
+        .sidebar-footer { padding:16px 20px; border-top:1px solid rgba(255,255,255,0.07); font-size:12px; color:#4a5e7a; }
+
+        /* Main */
+        .main { flex:1; padding:28px 32px; overflow-y:auto; }
+        .page-title { font-size:22px; font-weight:700; color:var(--primary); margin-bottom:4px; }
+        .page-sub   { font-size:13px; color:var(--muted); margin-bottom:28px; }
+
+        /* Welcome Banner */
+        .welcome-banner {
+            background:linear-gradient(135deg,var(--primary),var(--secondary));
+            color:#fff; border-radius:14px; padding:24px 28px;
+            display:flex; align-items:center; justify-content:space-between;
+            margin-bottom:28px; flex-wrap:wrap; gap:16px;
+        }
+        .wb-text h2 { font-size:20px; margin-bottom:4px; }
+        .wb-text p  { font-size:13px; opacity:0.85; }
+        .wb-badge {
+            background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.3);
+            border-radius:10px; padding:12px 20px; text-align:center;
+        }
+        .wb-badge .score { font-size:32px; font-weight:800; }
+        .wb-badge .label { font-size:11px; opacity:0.8; text-transform:uppercase; letter-spacing:1px; }
+
+        /* Stat Cards */
+        .stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:18px; margin-bottom:28px; }
+        .stat-card {
+            background:var(--card); border-radius:12px; padding:20px 22px;
+            border:1px solid var(--border); display:flex; align-items:center; gap:16px;
+        }
+        .stat-icon { font-size:32px; }
+        .stat-val { font-size:22px; font-weight:800; color:var(--primary); }
+        .stat-lbl { font-size:12px; color:var(--muted); margin-top:2px; }
+
+        /* Cards */
+        .card { background:var(--card); border-radius:12px; padding:24px 26px; border:1px solid var(--border); margin-bottom:24px; }
+        .card-title { font-size:16px; font-weight:700; color:var(--primary); margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+
+        /* Table */
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th,td { padding:11px 14px; text-align:left; border-bottom:1px solid var(--border); }
+        th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; background:#fafbfc; }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:#f7f9fc; }
+
+        /* Priority Badges */
+        .badge { display:inline-block; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:700; }
+        .badge-emergency { background:#fdf2f2; color:#c0392b; border:1px solid #f5b7b1; }
+        .badge-high      { background:#fef5e7; color:#d35400; border:1px solid #f8c471; }
+        .badge-medium    { background:#fefde8; color:#9a7d0a; border:1px solid #f7dc6f; }
+        .badge-low       { background:#eafaf1; color:#1a7a45; border:1px solid #a9dfbf; }
+        .badge-confirmed { background:#eafaf1; color:#1a7a45; }
+        .badge-pending   { background:#fef5e7; color:#d35400; }
+        .badge-completed { background:#eaf0fb; color:#1a5276; }
+
+        /* Form */
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .form-group { display:flex; flex-direction:column; gap:6px; }
+        .form-group.full { grid-column:1/-1; }
+        label { font-size:12px; font-weight:600; color:var(--text); }
+        input,select,textarea {
+            border:1px solid var(--border); border-radius:8px;
+            padding:10px 12px; font-size:13px; font-family:inherit;
+            color:var(--text); background:#fff; transition:border-color 0.2s;
+            width:100%;
+        }
+        input:focus,select:focus,textarea:focus { outline:none; border-color:var(--secondary); box-shadow:0 0 0 3px rgba(52,152,219,0.12); }
+        textarea { resize:vertical; min-height:80px; }
+
+        /* Pain slider */
+        .pain-display { display:flex; align-items:center; gap:12px; }
+        input[type=range] { flex:1; appearance:none; height:6px; border-radius:3px; background:#e0e6ed; border:none; padding:0; }
+        input[type=range]::-webkit-slider-thumb { appearance:none; width:18px; height:18px; border-radius:50%; background:var(--primary); cursor:pointer; }
+        .pain-val { font-size:20px; font-weight:800; color:var(--primary); min-width:32px; text-align:center; }
+
+        /* Buttons */
+        .btn { padding:11px 24px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; font-family:inherit; }
+        .btn-primary { background:var(--secondary); color:#fff; }
+        .btn-primary:hover { background:#2980b9; }
+        .btn-secondary { background:#f0f4f8; color:var(--text); }
+        .btn-secondary:hover { background:#e0e6ed; }
+        .btn-row { display:flex; gap:12px; margin-top:20px; }
+
+        /* Notification */
+        .notif-item {
+            display:flex; gap:12px; align-items:flex-start;
+            padding:12px 0; border-bottom:1px solid var(--border);
+        }
+        .notif-item:last-child { border-bottom:none; }
+        .notif-dot { width:10px; height:10px; border-radius:50%; background:var(--secondary); flex-shrink:0; margin-top:5px; }
+        .notif-dot.read { background:#bdc3c7; }
+        .notif-text { font-size:13px; line-height:1.5; }
+        .notif-time { font-size:11px; color:var(--muted); margin-top:2px; }
+
+        @media(max-width:768px) {
+            .sidebar { display:none; }
+            .main { padding:18px; }
+            .form-grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+    <div class="topbar-brand">🏥 <span>AI Patient Prioritization</span></div>
+    <div class="topbar-right">
+        <span>🔔 <span class="notif">3</span></span>
+        <div class="user-pill">👤 Priya Sharma</div>
+        <a href="index.html">← All Portals</a>
+    </div>
+</div>
+
+<div class="app-body">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <nav class="sidebar-nav">
+            <div class="nav-section">Patient Menu</div>
+            <a href="#dashboard"   class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</a>
+            <a href="#submit"      class="nav-item"><span class="nav-icon">📝</span> Submit Symptoms</a>
+            <a href="#appointments" class="nav-item"><span class="nav-icon">📅</span> My Appointments</a>
+            <a href="#history"     class="nav-item"><span class="nav-icon">🗂️</span> Medical History</a>
+            <div class="nav-section">Account</div>
+            <a href="#book"        class="nav-item"><span class="nav-icon">➕</span> Book Appointment</a>
+            <a href="#profile"     class="nav-item"><span class="nav-icon">👤</span> My Profile</a>
+            <a href="#notifs"      class="nav-item"><span class="nav-icon">🔔</span> Notifications</a>
+        </nav>
+        <div class="sidebar-footer">Patient Portal v1.0</div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+        <div class="page-title">Patient Dashboard</div>
+        <div class="page-sub">Welcome back, Priya. Here's your health overview for today, April 22, 2026.</div>
+
+        <!-- Welcome -->
+        <div id="dashboard" class="welcome-banner">
+            <div class="wb-text">
+                <h2>Hello, Priya Sharma 👋</h2>
+                <p>Your next appointment is <strong>Today at 3:30 PM</strong> with Dr. Sarah Johnson – Cardiology</p>
+            </div>
+            <div class="wb-badge">
+                <div class="score">Medium</div>
+                <div class="label">Current Priority</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-row">
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div>
+                    <div class="stat-val">Apr 22</div>
+                    <div class="stat-lbl">Next Appointment</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div>
+                    <div class="stat-val" style="color:var(--warning)">Medium</div>
+                    <div class="stat-lbl">AI Priority Level</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div>
+                    <div class="stat-val">4</div>
+                    <div class="stat-lbl">Symptom Reports Submitted</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:3px">Forms you filled describing your symptoms</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div>
+                    <div class="stat-val">45 min</div>
+                    <div class="stat-lbl">Est. Wait Time</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:3px">Based on your priority &amp; queue position</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointments -->
+        <div id="appointments" class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+                <div class="card-title" style="margin-bottom:0">📅 My Appointments</div>
+                <button class="btn btn-primary" style="font-size:13px;padding:9px 18px" onclick="document.getElementById('book').scrollIntoView({behavior:'smooth'});document.getElementById('book').style.outline='3px solid #3498db';setTimeout(()=>document.getElementById('book').style.outline='none',1500)">➕ Book New Appointment</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date &amp; Time</th>
+                        <th>Doctor</th>
+                        <th>Department</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Apr 22, 2026 – 3:30 PM</td>
+                        <td>Dr. Sarah Johnson</td>
+                        <td>Cardiology</td>
+                        <td><span class="badge badge-medium">Medium</span></td>
+                        <td><span class="badge badge-confirmed">Confirmed</span></td>
+                    </tr>
+                    <tr>
+                        <td>Apr 15, 2026 – 10:00 AM</td>
+                        <td>Dr. Michael Chen</td>
+                        <td>General Medicine</td>
+                        <td><span class="badge badge-low">Low</span></td>
+                        <td><span class="badge badge-completed">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td>Mar 28, 2026 – 2:00 PM</td>
+                        <td>Dr. Priya Patel</td>
+                        <td>Neurology</td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="badge badge-completed">Completed</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ── BOOK NEW APPOINTMENT (3-step wizard) ── -->
+        <div id="book" class="card" style="transition:outline 0.3s">
+            <div class="card-title">➕ Book a New Appointment</div>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:22px">Follow the 3 steps below: choose your department, select a doctor, then describe your symptoms so the AI can assign the right priority.</p>
+
+            <!-- Step indicators -->
+            <div style="display:flex;gap:0;margin-bottom:28px;border-radius:10px;overflow:hidden;border:1px solid var(--border)">
+                <div id="step-ind-1" style="flex:1;padding:12px;text-align:center;background:var(--secondary);color:#fff;font-size:13px;font-weight:700">Step 1 — Department</div>
+                <div id="step-ind-2" style="flex:1;padding:12px;text-align:center;background:#e8edf5;color:var(--muted);font-size:13px;font-weight:600">Step 2 — Select Doctor</div>
+                <div id="step-ind-3" style="flex:1;padding:12px;text-align:center;background:#e8edf5;color:var(--muted);font-size:13px;font-weight:600">Step 3 — Symptom Questions</div>
+            </div>
+
+            <!-- STEP 1: Department / Category -->
+            <div id="book-step1">
+                <h4 style="font-size:15px;color:var(--primary);margin-bottom:16px">Step 1: Select Department / Category</h4>
+                <p style="font-size:13px;color:var(--muted);margin-bottom:18px">Choose the medical department that best matches your condition. If unsure, select <em>General Medicine</em>.</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px">
+                    <div class="dept-card" onclick="selectDept(this,'Cardiology','❤️')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">❤️</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">Cardiology</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Heart, chest pain</div>
+                    </div>
+                    <div class="dept-card" onclick="selectDept(this,'General Medicine','🩺')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">🩺</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">General Medicine</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">General symptoms</div>
+                    </div>
+                    <div class="dept-card" onclick="selectDept(this,'Neurology','🧠')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">🧠</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">Neurology</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Headache, brain</div>
+                    </div>
+                    <div class="dept-card" onclick="selectDept(this,'Orthopaedics','🦴')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">🦴</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">Orthopaedics</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Bones, joints</div>
+                    </div>
+                    <div class="dept-card" onclick="selectDept(this,'Gastroenterology','🫃')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">🫃</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">Gastroenterology</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Stomach, digestion</div>
+                    </div>
+                    <div class="dept-card" onclick="selectDept(this,'Endocrinology','💉')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">💉</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">Endocrinology</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Diabetes, hormones</div>
+                    </div>
+                    <div class="dept-card" onclick="selectDept(this,'Pulmonology','🫁')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">🫁</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">Pulmonology</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Lungs, breathing</div>
+                    </div>
+                    <div class="dept-card" onclick="selectDept(this,'Dermatology','🧴')" style="border:2px solid var(--border);border-radius:10px;padding:18px 12px;text-align:center;cursor:pointer;transition:all 0.2s">
+                        <div style="font-size:30px;margin-bottom:8px">🧴</div>
+                        <div style="font-size:13px;font-weight:700;color:var(--text)">Dermatology</div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Skin conditions</div>
+                    </div>
+                </div>
+                <div id="step1-msg" style="font-size:13px;color:var(--danger);display:none;margin-bottom:10px">⚠️ Please select a department to continue.</div>
+                <button class="btn btn-primary" onclick="goStep2()">Next: Select Doctor →</button>
+            </div>
+
+            <!-- STEP 2: Select Doctor (hidden initially) -->
+            <div id="book-step2" style="display:none">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+                    <button onclick="goStep1()" style="background:#f0f4f8;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">← Back</button>
+                    <h4 style="font-size:15px;color:var(--primary)">Step 2: Select a Doctor</h4>
+                </div>
+                <div id="dept-label" style="background:#eaf0fb;color:#1a5276;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:18px;display:inline-block">Department: —</div>
+                <p style="font-size:13px;color:var(--muted);margin-bottom:18px">Doctors available in your selected department. Click a card to select.</p>
+                <div id="doctor-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px"></div>
+                <div id="step2-msg" style="font-size:13px;color:var(--danger);display:none;margin-bottom:10px">⚠️ Please select a doctor to continue.</div>
+                <button class="btn btn-primary" onclick="goStep3()">Next: Describe Symptoms →</button>
+            </div>
+
+            <!-- STEP 3: Dynamic Category Questions (hidden initially) -->
+            <div id="book-step3" style="display:none">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+                    <button onclick="goStep2()" style="background:#f0f4f8;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">← Back</button>
+                    <h4 style="font-size:15px;color:var(--primary)">Step 3: Symptom Questions</h4>
+                </div>
+
+                <!-- Booking summary strip -->
+                <div id="booking-summary" style="background:#eaf0fb;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;color:#1a5276"></div>
+
+                <!-- How questions work – info banner -->
+                <div style="background:#f0f9ff;border:1px solid #bee3f8;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:20px;color:#1a5276">
+                    <strong>ℹ️ How these questions work:</strong><br>
+                    The questions below are in <strong>two groups</strong>:<br>
+                    <span style="display:inline-block;margin-top:6px">
+                        🔵 <strong>Common questions</strong> — asked for every department (pain level, duration, urgency, medications).<br>
+                        🟢 <strong>Category-specific questions</strong> — defined by the <em>Admin</em> for <span id="dept-name-label" style="font-weight:700"></span> and loaded automatically when you selected this department.<br>
+                    </span>
+                    <span style="display:inline-block;margin-top:8px">
+                        Once you submit, <strong>AI reads all your answers</strong> and assigns your priority score (0–100). No question is generated by AI — they are pre-defined clinical questions decided by medical staff via the Admin Panel.
+                    </span>
+                </div>
+
+                <!-- ── COMMON QUESTIONS (every category) ── -->
+                <div style="background:#f8f9fa;border-radius:10px;padding:18px 20px;border:1px solid #dde6f0;margin-bottom:20px">
+                    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#3498db;margin-bottom:16px">🔵 Common Questions — All Departments</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Main Symptom / Chief Complaint *</label>
+                            <input type="text" id="bk-complaint" placeholder="e.g. Chest pain, severe headache, difficulty breathing…">
+                        </div>
+                        <div class="form-group">
+                            <label>How long have you had this? *</label>
+                            <select id="bk-duration">
+                                <option value="">Select duration…</option>
+                                <option>Less than 1 hour</option>
+                                <option>1–6 hours</option>
+                                <option>6–24 hours</option>
+                                <option>1–3 days</option>
+                                <option>More than 3 days</option>
+                            </select>
+                        </div>
+                        <div class="form-group full">
+                            <label>Pain / Discomfort Level * <span style="color:var(--muted);font-weight:400">(0 = No pain · 10 = Unbearable)</span></label>
+                            <div class="pain-display">
+                                <span>0</span>
+                                <input type="range" min="0" max="10" value="0" id="bk-pain" oninput="document.getElementById('bk-pval').innerText=this.value">
+                                <span>10</span>
+                                <div class="pain-val" id="bk-pval">0</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Is this getting worse over time?</label>
+                            <select id="bk-worse">
+                                <option>No – staying the same</option>
+                                <option>Yes – slowly getting worse</option>
+                                <option>Yes – rapidly getting worse</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Self-assessed urgency</label>
+                            <select id="bk-urgency">
+                                <option>Not urgent – routine check</option>
+                                <option>Somewhat urgent</option>
+                                <option>Very urgent – need to be seen today</option>
+                                <option>Emergency – need immediate help</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Current Medications <span style="color:var(--muted);font-weight:400">(or 'None')</span></label>
+                            <input type="text" id="bk-meds" placeholder="e.g. Metformin 500mg, Aspirin 75mg">
+                        </div>
+                        <div class="form-group">
+                            <label>Known Allergies <span style="color:var(--muted);font-weight:400">(or 'None')</span></label>
+                            <input type="text" id="bk-allergies" placeholder="e.g. Penicillin, Sulfa drugs">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── CATEGORY-SPECIFIC QUESTIONS (loaded dynamically) ── -->
+                <div style="background:#f0fdf4;border-radius:10px;padding:18px 20px;border:1px solid #bbf7d0;margin-bottom:20px">
+                    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#16a34a;margin-bottom:4px">🟢 Category-Specific Questions — <span id="cat-q-dept-label"></span></div>
+                    <div style="font-size:11px;color:#6b7280;margin-bottom:16px">⚙️ These questions were configured by the Admin for this department. They help AI understand department-specific risk factors.</div>
+                    <div id="dynamic-questions" class="form-grid"></div>
+                </div>
+
+                <!-- Additional notes -->
+                <div class="form-group" style="margin-bottom:20px">
+                    <label>Any other information for the doctor</label>
+                    <textarea id="bk-notes" placeholder="Recent travel, family history, previous similar episodes…" style="min-height:65px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;width:100%"></textarea>
+                </div>
+
+                <div id="step3-msg" style="font-size:13px;color:var(--danger);display:none;margin-bottom:10px">⚠️ Please fill in at least the Chief Complaint and Duration.</div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="submitBooking()">🤖 Submit &amp; Get AI Priority</button>
+                    <button class="btn btn-secondary" onclick="resetBooking()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        // ─────────────────────────────────────────────────────────────────
+        // QUESTION BANK — Admin-defined per category
+        // In the real system: Admin Panel → Categories → Manage Questions
+        // Each question has: id, label, type (text/select/yesno/range), options, aiWeight
+        // aiWeight = how much this answer contributes to the AI priority score (0–1)
+        // ─────────────────────────────────────────────────────────────────
+        var questionDB = {
+            'Cardiology': [
+                { id:'q_radiation',  label:'Does the pain radiate to your arm, jaw, or back?',           type:'yesno',  aiWeight:0.25 },
+                { id:'q_breathing',  label:'Are you experiencing shortness of breath?',                  type:'yesno',  aiWeight:0.2  },
+                { id:'q_sweating',   label:'Are you sweating unusually or feeling lightheaded?',         type:'yesno',  aiWeight:0.2  },
+                { id:'q_bp',         label:'Do you have a history of high blood pressure?',              type:'yesno',  aiWeight:0.1  },
+                { id:'q_heartprev',  label:'Have you had a heart attack or heart surgery before?',       type:'yesno',  aiWeight:0.15 },
+                { id:'q_palpitation',label:'Are you experiencing palpitations (irregular heartbeat)?',  type:'yesno',  aiWeight:0.1  }
+            ],
+            'Neurology': [
+                { id:'q_speech',     label:'Are you having difficulty speaking or understanding speech?',type:'yesno',  aiWeight:0.3  },
+                { id:'q_vision',     label:'Do you have sudden blurred vision or vision loss?',          type:'yesno',  aiWeight:0.25 },
+                { id:'q_weakness',   label:'Do you feel sudden weakness or numbness in limbs?',          type:'yesno',  aiWeight:0.25 },
+                { id:'q_headtype',   label:'How would you describe the headache?',
+                  type:'select', options:['Dull/pressure','Throbbing','Sudden severe (thunderclap)','Behind one eye'], aiWeight:0.15 },
+                { id:'q_seizure',    label:'Have you had any seizures or blackouts recently?',           type:'yesno',  aiWeight:0.3  }
+            ],
+            'Gastroenterology': [
+                { id:'q_vomiting',   label:'Are you vomiting? Any blood in vomit?',
+                  type:'select', options:['No vomiting','Vomiting – no blood','Vomiting with blood'], aiWeight:0.25 },
+                { id:'q_bowel',      label:'Have you noticed blood in your stool?',                      type:'yesno',  aiWeight:0.3  },
+                { id:'q_abdloc',     label:'Where is the abdominal pain located?',
+                  type:'select', options:['Upper centre','Upper right','Lower right','Lower left','All over'], aiWeight:0.15 },
+                { id:'q_fever',      label:'Do you have a fever (above 38°C)?',                          type:'yesno',  aiWeight:0.15 },
+                { id:'q_jaundice',   label:'Have you noticed yellowing of skin or eyes?',                type:'yesno',  aiWeight:0.2  }
+            ],
+            'Orthopaedics': [
+                { id:'q_injury',     label:'Was there a specific injury or fall that caused this?',      type:'yesno',  aiWeight:0.2  },
+                { id:'q_swelling',   label:'Is there visible swelling, bruising, or deformity?',         type:'yesno',  aiWeight:0.2  },
+                { id:'q_weightbear', label:'Can you put weight / use the affected limb?',
+                  type:'select', options:['Yes, fully','With difficulty','No – cannot bear weight'], aiWeight:0.25 },
+                { id:'q_mobility',   label:'Has mobility reduced significantly since this started?',     type:'yesno',  aiWeight:0.15 },
+                { id:'q_numbness',   label:'Do you feel numbness or tingling near the affected area?',   type:'yesno',  aiWeight:0.2  }
+            ],
+            'Pulmonology': [
+                { id:'q_o2',         label:'Do you feel you are not getting enough air even at rest?',   type:'yesno',  aiWeight:0.3  },
+                { id:'q_cough',      label:'Do you have a persistent cough? Any blood in cough?',
+                  type:'select', options:['No cough','Dry cough','Cough with phlegm','Cough with blood'], aiWeight:0.25 },
+                { id:'q_chest',      label:'Do you feel tightness or pain in the chest when breathing?', type:'yesno',  aiWeight:0.2  },
+                { id:'q_smoking',    label:'Do you smoke or have a history of smoking?',                 type:'yesno',  aiWeight:0.1  },
+                { id:'q_fever_pul',  label:'Do you have fever with chills (possible infection)?',        type:'yesno',  aiWeight:0.15 }
+            ],
+            'Endocrinology': [
+                { id:'q_glucose',    label:'Have you checked your blood sugar recently? Was it abnormal?', type:'yesno', aiWeight:0.25 },
+                { id:'q_fatigue',    label:'Are you experiencing extreme fatigue or weakness?',           type:'yesno',  aiWeight:0.15 },
+                { id:'q_thirst',     label:'Are you unusually thirsty or urinating very frequently?',    type:'yesno',  aiWeight:0.2  },
+                { id:'q_weight',     label:'Have you had sudden unexplained weight gain or loss?',        type:'yesno',  aiWeight:0.15 },
+                { id:'q_confusion',  label:'Are you feeling confused or disoriented?',                   type:'yesno',  aiWeight:0.25 }
+            ],
+            'General Medicine': [
+                { id:'q_fever_gm',   label:'Do you have fever? If yes, rough temperature?',
+                  type:'select', options:['No fever','Low grade (37–38°C)','Moderate (38–39°C)','High (above 39°C)'], aiWeight:0.2 },
+                { id:'q_infection',  label:'Do you suspect an infection (cold, throat, urinary, etc)?',  type:'yesno',  aiWeight:0.15 },
+                { id:'q_appetite',   label:'Have you lost appetite recently?',                           type:'yesno',  aiWeight:0.1  },
+                { id:'q_famhist',    label:'Does your family have history of the condition you suspect?', type:'yesno',  aiWeight:0.1  },
+                { id:'q_travel',     label:'Have you travelled recently (within 2 weeks)?',              type:'yesno',  aiWeight:0.1  }
+            ],
+            'Dermatology': [
+                { id:'q_rash',       label:'Describe the skin issue',
+                  type:'select', options:['Rash / redness','Swelling / hives','Open wound / ulcer','Discolouration','Itching only'], aiWeight:0.15 },
+                { id:'q_spread',     label:'Is it spreading rapidly?',                                   type:'yesno',  aiWeight:0.25 },
+                { id:'q_fever_derm', label:'Do you have fever along with the skin condition?',           type:'yesno',  aiWeight:0.2  },
+                { id:'q_allergy',    label:'Have you recently started a new medication or eaten something new?', type:'yesno', aiWeight:0.2 },
+                { id:'q_breathing_d',label:'Is there any swelling near the throat or difficulty breathing?', type:'yesno', aiWeight:0.35 }
+            ]
+        };
+
+        // Booking wizard state
+        var bkDept = '', bkDoctor = '';
+
+        var doctorDB = {
+            'Cardiology':        [{name:'Dr. Sarah Johnson', exp:'12 yrs', slots:'Today 4PM, Tomorrow 10AM'},{name:'Dr. Arjun Mehta', exp:'8 yrs', slots:'Today 5PM, Apr 24 9AM'}],
+            'General Medicine':  [{name:'Dr. Michael Chen',  exp:'10 yrs', slots:'Today 3PM, Tomorrow 11AM'},{name:'Dr. Sunita Roy', exp:'6 yrs',  slots:'Tomorrow 9AM, Apr 25 2PM'}],
+            'Neurology':         [{name:'Dr. Priya Patel',   exp:'14 yrs', slots:'Tomorrow 10AM, Apr 24 2PM'},{name:'Dr. Ramesh K.', exp:'9 yrs', slots:'Apr 24 11AM, Apr 25 3PM'}],
+            'Orthopaedics':      [{name:'Dr. Daniel Wilson',  exp:'11 yrs', slots:'Today 4:30PM, Tomorrow 2PM'},{name:'Dr. Keerthi S.', exp:'7 yrs', slots:'Tomorrow 3PM, Apr 25 10AM'}],
+            'Gastroenterology':  [{name:'Dr. Nadia Ahmed',   exp:'9 yrs',  slots:'Tomorrow 11AM, Apr 24 4PM'},{name:'Dr. Sanjay B.', exp:'13 yrs', slots:'Apr 24 10AM, Apr 25 1PM'}],
+            'Endocrinology':     [{name:'Dr. Kavya Sharma',  exp:'7 yrs',  slots:'Tomorrow 9AM, Apr 25 11AM'},{name:'Dr. Rajan T.', exp:'10 yrs', slots:'Apr 24 2PM, Apr 25 4PM'}],
+            'Pulmonology':       [{name:'Dr. Farida Khan',   exp:'8 yrs',  slots:'Today 5PM, Tomorrow 10AM'},{name:'Dr. Suresh N.', exp:'15 yrs', slots:'Tomorrow 2PM, Apr 24 9AM'}],
+            'Dermatology':       [{name:'Dr. Pooja Iyer',    exp:'6 yrs',  slots:'Tomorrow 3PM, Apr 24 11AM'},{name:'Dr. Arun P.', exp:'11 yrs', slots:'Apr 24 4PM, Apr 25 2PM'}]
+        };
+
+        function selectDept(el, dept, icon) {
+            bkDept = dept;
+            document.querySelectorAll('.dept-card').forEach(c => {
+                c.style.borderColor = '#e0e6ed';
+                c.style.background  = '#fff';
+            });
+            el.style.borderColor = '#3498db';
+            el.style.background  = '#eaf5fd';
+            document.getElementById('step1-msg').style.display = 'none';
+        }
+
+        function goStep1() {
+            document.getElementById('book-step1').style.display = 'block';
+            document.getElementById('book-step2').style.display = 'none';
+            document.getElementById('book-step3').style.display = 'none';
+            setStepInd(1);
+        }
+
+        function goStep2() {
+            if (!bkDept) { document.getElementById('step1-msg').style.display='block'; return; }
+            // Build doctor cards
+            var docs = doctorDB[bkDept] || [];
+            var html = '';
+            docs.forEach(function(d) {
+                html += '<div class="doc-card" onclick="selectDoc(this,\'' + d.name + '\')" style="border:2px solid #e0e6ed;border-radius:10px;padding:16px;cursor:pointer;transition:all 0.2s">' +
+                    '<div style="font-size:28px;margin-bottom:8px">👨‍⚕️</div>' +
+                    '<div style="font-weight:700;font-size:14px;margin-bottom:4px">' + d.name + '</div>' +
+                    '<div style="font-size:12px;color:#7f8c8d;margin-bottom:6px">Experience: ' + d.exp + '</div>' +
+                    '<div style="font-size:11px;color:#27ae60;font-weight:600">🕐 ' + d.slots + '</div>' +
+                    '</div>';
+            });
+            document.getElementById('doctor-list').innerHTML = html;
+            document.getElementById('dept-label').innerText = '🏥 ' + bkDept;
+            document.getElementById('book-step1').style.display = 'none';
+            document.getElementById('book-step2').style.display = 'block';
+            document.getElementById('book-step3').style.display = 'none';
+            bkDoctor = '';
+            setStepInd(2);
+        }
+
+        function selectDoc(el, name) {
+            bkDoctor = name;
+            document.querySelectorAll('.doc-card').forEach(c => {
+                c.style.borderColor = '#e0e6ed';
+                c.style.background  = '#fff';
+            });
+            el.style.borderColor = '#3498db';
+            el.style.background  = '#eaf5fd';
+            document.getElementById('step2-msg').style.display = 'none';
+        }
+
+        function goStep3() {
+            if (!bkDoctor) { document.getElementById('step2-msg').style.display='block'; return; }
+            document.getElementById('booking-summary').innerHTML =
+                '📋 Department: <strong>' + bkDept + '</strong> &nbsp;|&nbsp; 👨‍⚕️ Doctor: <strong>' + bkDoctor + '</strong>';
+            document.getElementById('dept-name-label').innerText = bkDept;
+            document.getElementById('cat-q-dept-label').innerText = bkDept;
+
+            // Render category-specific questions dynamically
+            var questions = questionDB[bkDept] || [];
+            var html = '';
+            questions.forEach(function(q) {
+                html += '<div class="form-group">';
+                html += '<label>' + q.label + ' <span style="font-size:10px;color:#16a34a;font-weight:400">[AI weight: ' + Math.round(q.aiWeight * 100) + '%]</span></label>';
+                if (q.type === 'yesno') {
+                    html += '<select id="' + q.id + '">' +
+                        '<option value="no">No</option>' +
+                        '<option value="yes">Yes</option>' +
+                        '</select>';
+                } else if (q.type === 'select') {
+                    html += '<select id="' + q.id + '">';
+                    q.options.forEach(function(opt) { html += '<option>' + opt + '</option>'; });
+                    html += '</select>';
+                } else {
+                    html += '<input type="text" id="' + q.id + '" placeholder="Your answer…">';
+                }
+                html += '</div>';
+            });
+            document.getElementById('dynamic-questions').innerHTML = html;
+
+            document.getElementById('book-step1').style.display = 'none';
+            document.getElementById('book-step2').style.display = 'none';
+            document.getElementById('book-step3').style.display = 'block';
+            setStepInd(3);
+        }
+
+        function submitBooking() {
+            var complaint = document.getElementById('bk-complaint').value.trim();
+            var duration  = document.getElementById('bk-duration').value;
+            if (!complaint || !duration) {
+                document.getElementById('step3-msg').style.display = 'block';
+                return;
+            }
+
+            // ── Base scoring (common questions) ──
+            var pain = parseInt(document.getElementById('bk-pain').value);
+            var score = 10; // base
+            score += pain * 3.5;  // pain contributes up to 35 pts
+
+            var urgency = document.getElementById('bk-urgency').value;
+            if (urgency.includes('Emergency')) score += 30;
+            else if (urgency.includes('Very')) score += 20;
+            else if (urgency.includes('Somewhat')) score += 10;
+
+            var worse = document.getElementById('bk-worse').value;
+            if (worse.includes('rapidly')) score += 15;
+            else if (worse.includes('slowly')) score += 7;
+
+            // ── Category-specific scoring (AI reads each answer × its weight) ──
+            var questions = questionDB[bkDept] || [];
+            var catScoreTotal = 0;
+            questions.forEach(function(q) {
+                var el = document.getElementById(q.id);
+                if (!el) return;
+                var val = el.value.toLowerCase();
+                // Yes answers and high-severity options increase score
+                var flag = val === 'yes' || val.includes('blood') ||
+                           val.includes('cannot') || val.includes('sudden') ||
+                           val.includes('throat') || val.includes('high');
+                if (flag) catScoreTotal += q.aiWeight * 40; // max 40 pts from category Qs
+            });
+            score += catScoreTotal;
+            score = Math.min(Math.round(score), 100);
+
+            var level = score >= 80 ? '🚨 Emergency' : score >= 60 ? '🔴 High' : score >= 30 ? '🟡 Medium' : '🟢 Low';
+            var wait  = score >= 80 ? 'Within 15 minutes' : score >= 60 ? 'Within 1 hour' : score >= 30 ? 'Within 4 hours' : 'Same day / next day';
+            var reason = score >= 80
+                ? 'Multiple high-risk indicators detected in ' + bkDept + ' screening questions. Immediate evaluation required.'
+                : score >= 60
+                ? 'Significant symptoms identified. Prompt evaluation recommended.'
+                : score >= 30
+                ? 'Moderate symptoms. Please attend your scheduled appointment.'
+                : 'Routine presentation. No immediate risk indicators.';
+
+            alert('✅ Appointment Booking Submitted!\n\n' +
+                '🏥 Department: ' + bkDept + '\n' +
+                '👨‍⚕️ Doctor: ' + bkDoctor + '\n\n' +
+                '🤖 AI Priority Analysis:\n' +
+                '📊 Score: ' + score + ' / 100\n' +
+                '⚠️  Level: ' + level + '\n' +
+                '⏱️  Wait: ' + wait + '\n' +
+                '💡 Reason: ' + reason + '\n\n' +
+                '📧 Confirmation sent to your email.');
+            resetBooking();
+        }
+
+        function resetBooking() {
+            bkDept = ''; bkDoctor = '';
+            goStep1();
+            document.querySelectorAll('.dept-card').forEach(c => { c.style.borderColor='#e0e6ed'; c.style.background='#fff'; });
+        }
+
+        function setStepInd(active) {
+            for (var i = 1; i <= 3; i++) {
+                var el = document.getElementById('step-ind-' + i);
+                if (i === active) {
+                    el.style.background = '#2c5aa0';
+                    el.style.color = '#fff';
+                } else if (i < active) {
+                    el.style.background = '#27ae60';
+                    el.style.color = '#fff';
+                } else {
+                    el.style.background = '#e8edf5';
+                    el.style.color = '#7f8c8d';
+                }
+            }
+        }
+        </script>
+
+        <!-- Submit Symptoms (standalone for existing patients) -->
+        <div id="submit" class="card">
+            <div class="card-title">📝 Update Symptom Report <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px">— For an existing appointment</span></div>
+            <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;font-size:13px;color:#856404;margin-bottom:16px">
+                💡 <strong>Note:</strong> Use this form to update symptoms for an <em>existing</em> appointment. To book a <em>new</em> appointment, use the <strong>Book New Appointment</strong> section above.
+            </div>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Fill in your symptoms accurately. Our AI will re-analyse your input and update your priority score if needed.</p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Main Symptom / Chief Complaint *</label>
+                    <input type="text" placeholder="e.g. Chest pain, Severe headache…" value="Shortness of breath">
+                </div>
+                <div class="form-group">
+                    <label>How long have you had this? *</label>
+                    <select>
+                        <option>Less than 1 hour</option>
+                        <option selected>1–6 hours</option>
+                        <option>6–24 hours</option>
+                        <option>1–3 days</option>
+                        <option>More than 3 days</option>
+                    </select>
+                </div>
+                <div class="form-group full">
+                    <label>Pain Level (0 = None, 10 = Unbearable) *</label>
+                    <div class="pain-display">
+                        <span>0</span>
+                        <input type="range" min="0" max="10" value="6" oninput="document.getElementById('pval').innerText=this.value">
+                        <span>10</span>
+                        <div class="pain-val" id="pval">6</div>
+                    </div>
+                </div>
+                <div class="form-group full">
+                    <label>Additional Symptoms</label>
+                    <input type="text" placeholder="e.g. Sweating, Dizziness, Nausea (comma separated)" value="Dizziness, Mild sweating">
+                </div>
+                <div class="form-group">
+                    <label>Current Medications</label>
+                    <input type="text" placeholder="None, or list medications" value="Metformin 500mg">
+                </div>
+                <div class="form-group">
+                    <label>Known Allergies</label>
+                    <input type="text" placeholder="None, or list allergies" value="Penicillin">
+                </div>
+                <div class="form-group full">
+                    <label>Additional Notes</label>
+                    <textarea placeholder="Any other information the doctor should know…">I have a history of mild hypertension. Symptoms started after mild exercise this morning.</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Urgency (Self-assessed)</label>
+                    <select>
+                        <option>Not urgent – routine</option>
+                        <option selected>Somewhat urgent</option>
+                        <option>Very urgent</option>
+                        <option>Emergency – call doctor immediately</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="alert('✅ Symptom report submitted!\n\nAI Analysis Result:\n📊 Priority Score: 58 / 100\n⚠️ Priority Level: Medium\n🏥 Recommended Department: Cardiology\n💡 Reason: Respiratory symptoms with cardiac history. Prompt evaluation advised.\n\nAppointment will be scheduled shortly.')">Submit for AI Analysis</button>
+                <button class="btn btn-secondary">Save Draft</button>
+            </div>
+        </div>
+
+        <!-- Medical History -->
+        <div id="history" class="card">
+            <div class="card-title">🗂️ Medical History</div>
+            <table>
+                <thead>
+                    <tr><th>Date</th><th>Condition / Symptoms</th><th>Diagnosis</th><th>Treating Doctor</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Apr 15, 2026</td>
+                        <td>Fatigue, mild breathlessness</td>
+                        <td>Anaemia – Mild</td>
+                        <td>Dr. Michael Chen</td>
+                    </tr>
+                    <tr>
+                        <td>Mar 28, 2026</td>
+                        <td>Severe headache, visual disturbance</td>
+                        <td>Tension Headache</td>
+                        <td>Dr. Priya Patel</td>
+                    </tr>
+                    <tr>
+                        <td>Feb 10, 2026</td>
+                        <td>High BP, dizziness</td>
+                        <td>Hypertension (Stage 1)</td>
+                        <td>Dr. Sarah Johnson</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notifs" class="card">
+            <div class="card-title">🔔 Notifications</div>
+            <div class="notif-item">
+                <div class="notif-dot"></div>
+                <div>
+                    <div class="notif-text"><strong>Appointment Confirmed</strong> – Today 3:30 PM with Dr. Sarah Johnson, Cardiology.</div>
+                    <div class="notif-time">22 Apr 2026 · 9:12 AM</div>
+                </div>
+            </div>
+            <div class="notif-item">
+                <div class="notif-dot"></div>
+                <div>
+                    <div class="notif-text"><strong>Priority Updated</strong> – Your AI priority score has been validated by Nurse Rani and set to Medium.</div>
+                    <div class="notif-time">22 Apr 2026 · 8:45 AM</div>
+                </div>
+            </div>
+            <div class="notif-item">
+                <div class="notif-dot read"></div>
+                <div>
+                    <div class="notif-text">Reminder: Take Metformin 500mg with breakfast. Follow-up in 1 week.</div>
+                    <div class="notif-time">21 Apr 2026 · 7:00 AM</div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+</body>
+</html>

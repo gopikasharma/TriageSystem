@@ -1,0 +1,189 @@
+AI Patient Appointment Prioritization System - Role Descriptions & Functions
+=============================================================================
+
+Home Page
+---------
+  - Sign In / Sign Up options
+  - Doctor Booking Portal - Accept email and phone, recommend full registration for follow-up appointments
+  - Quick symptom checker (for emergency cases) (phase 2)
+  - System overview and features (phase 2)
+
+
+1. PATIENTS/USER ROLE
+   ==================
+   
+   Registration Features:
+   - Complete profile setup (Name, Email, Phone, Gender, Date of Birth, Address)
+   - Medical history input (allergies, current medications, chronic conditions)
+   - Emergency contact information
+   - Insurance details (if applicable)
+
+   Appointment Management:
+   - Select medical category/specialization
+   - Choose preferred doctor
+   - Input current symptoms using structured form
+   - Submit pain level (0-10 scale) and symptom duration
+   - View available appointment dates and time slots
+   - Receive AI-generated priority score and estimated wait time
+
+   Appointment History:
+   - View upcoming appointments with date, time, and doctor details
+   - Access past appointment records and consultation notes
+   - Filter options: Upcoming, Past, Cancelled, Completed
+   - Download appointment summaries and prescriptions
+
+   Notifications System:
+   - SMS/Email alerts for appointment confirmations
+   - Reminders 24 hours before appointment
+   - Priority level updates if condition changes
+   - Rescheduling notifications
+
+
+2. RECEPTION STAFF ROLE  (will help Communicate between Nurse and patient)
+   ====================
+
+   Patient Management:
+   - Register new walk-in patients
+   - Update existing patient information
+   - Verify insurance and contact details
+   - Handle patient inquiries and complaints
+
+   Daily Operations:
+   - View today's appointments (with doctor filter)
+   - Manage appointment check-ins and check-outs
+   - Handle appointment cancellations and rescheduling
+   - Print patient appointment cards and instructions
+
+   Appointment Scheduling Explanation:
+   - Reception staff can manually create appointments for patients who call or walk-in
+   - They can override system suggestions if slots are full
+   - They manage the waiting list and call patients when slots become available
+   - They handle emergency appointments and urgent cases
+
+   Priority Queue Management:
+   - Monitor the "Awaiting Scheduling" queue with real-time status updates
+   - Filter by priority level: Emergency, High, Medium, Low
+   - Track consultation status: Waiting, In Progress, Completed
+   - Manage overflow patients and waiting room capacity
+
+
+3. NURSE ROLE
+   ===========
+
+   Appointment Validation:
+   - Review AI-generated priority scores for clinical accuracy
+   - One-click validation to approve AI recommendations
+   - Override AI priority with clinical reasoning when necessary
+   - Document validation decisions with timestamps
+
+   Patient Triage:
+   - Conduct initial patient assessments
+   - Update symptom information based on clinical observation
+   - Escalate emergency cases immediately to doctors
+   - Provide pre-consultation screening and vital signs recording
+
+   Workflow Management:
+   - Close completed appointments and update patient status
+   - Generate final schedule based on validated AI priorities
+   - Communicate schedule changes to doctors and reception
+   - Manage patient flow to optimize doctor availability
+
+
+4. DOCTOR ROLE
+   ============
+
+   Daily Schedule:
+   - View today's appointment list sorted by priority and time
+   - Access patient details by clicking on patient rows
+   - See AI priority reasoning and nurse validation notes
+   - View complete patient history and previous consultations
+
+   Consultation Management:
+   - Update consultation details, diagnosis, and treatment plans
+   - Prescribe medications and order tests
+   - Schedule follow-up appointments
+   - Add clinical notes and recommendations
+   
+   Patient Communication:
+   - Send post-consultation instructions to patients
+   - Request additional tests or specialist referrals
+   - Update treatment progress notes
+
+
+5. ADMIN ROLE
+   ===========
+
+   User Management:
+   - Add new staff: Doctors, Nurses, Reception staff
+   - Auto-generate secure usernames and passwords
+   - Assign role-based permissions and access levels
+   - Manage user deactivation and role changes
+
+   System Configuration:
+   - Add medical categories/specializations
+   - Create category-specific questionnaires and symptoms lists
+   - Configure AI priority scoring parameters
+   - Set up notification templates and schedules
+   - Set up doctor working schedules (days, hours, break times)  (Make this flexible with Doctors and Reception/Nurse)
+
+   Reporting & Analytics: (Next Phase)
+   - Generate system usage reports
+   - Monitor AI accuracy and validation rates
+   - Track appointment completion rates and wait times
+   - Export data for administrative review
+
+
+WORKFLOW RELATIONSHIPS & DEPENDENCIES
+=====================================
+
+Doctor-Nurse-Category Relationship:
+   - Nurses are assigned to specific doctors or medical categories
+   - When nurses log in, they can select their assigned doctor
+   - The system displays all patients scheduled for that doctor on the current day
+   - Nurses have the authority to close appointments and manage the daily schedule
+
+Daily Schedule Generation Process:
+   1. AI generates initial priority scores for symptom reports
+   2. Nurses review and validate AI recommendations
+   3. Nurses can reorder patients based on clinical judgment with documented reasons
+   4. Final schedule is generated and shared with assigned doctor
+   5. Reception staff manage patient check-ins according to the validated schedule
+   6. Doctors see the prioritized patient list and begin consultations
+
+Emergency Override Process:
+   - Any role can flag a patient as "Emergency" to bypass normal scheduling
+   - Emergency cases automatically go to the top of the queue
+   - Notifications are sent to all relevant staff immediately
+   - Emergency cases require immediate nurse validation and doctor assignment 
+
+
+DB Design
+----------
+1. User
+2. Department/Category
+3. Questions (Link with Department/Category/Doctor)
+4. Doctor's Schedule (Link Doctor)
+5. Consultation (Link User and Doctor ) - this is for save after consultation what is doctor's finding, 
+  5.1 Next Visit, followup details
+
+6. Appointments - Link(User/Doctor), dates
+   6.1 - Save during take appointment
+   6.2 - Add new entry after doctor consultation if need follow up. 
+   6.3 - 
+
+
+
+
+Flow
+----
+1.User/Reception will create appointment
+2.User inform with Receptionist once they arrived
+3.Nurse/Doctor can see the available patients as per priority
+4.Doctor will consult patient and update details in portal
+5.Nurse also can do this, also check the report and update details asper against patient record
+  5.1 Can Reschedule or do the next appointment
+
+
+    
+
+
