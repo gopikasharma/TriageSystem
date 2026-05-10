@@ -1,17 +1,20 @@
-using TriageSystem.API.Shared;
-
 namespace TriageSystem.API.Entities;
 
-public class Patient
+public class Patient : BaseEntity
 {
-    public int Id { get; set; }
-    public required string FirstName { get; set; }
-    public required string LastName { get; set; }
-    public required string Email { get; set; }
-    public BiologicalSex Sex { get; set; }
-    public int Age { get; set; }
-    public string? Symptoms { get; set; }
-    public Priority Priority{ get; set; } = Priority.Routine;
-    public DateTime ArrivalTime { get; set; } = DateTime.UtcNow;
-    public bool IsCheckedIn { get; set; } = false;
+    public Guid UserId { get; set; }
+    public AppUser User { get; set; } = null!;
+
+    public DateTime DateOfBirth { get; set; }
+    public string Gender { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+    
+    public string? Allergies { get; set; }
+    public string? CurrentMedications { get; set; }
+    public string? ChronicConditions { get; set; }
+    public string? EmergencyContactInfo { get; set; }
+
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    public ICollection<SymptomReport> SymptomReports { get; set; } = new List<SymptomReport>();
 }

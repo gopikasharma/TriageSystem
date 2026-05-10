@@ -6,29 +6,31 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TriageSystem.API.Data;
 using TriageSystem.API.Entities;
-using TriageSystem.API.Interfaces;
-using TriageSystem.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
-options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-builder.Services.AddIdentity<AppUser,AppRole>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+
+builder.Services.AddIdentity<AppUser, AppRole>(options =>
 {
     options.Password.RequiredLength = 8;
-
     options.User.RequireUniqueEmail = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
+
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
-builder.Services.AddAuthorization();
-builder.Services.AddScoped<ITokenService, TokenService>();
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -47,6 +49,9 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true
     };
 });
+builder.Services.AddAuthorization();
+
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAngular", policy =>
@@ -56,31 +61,16 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
+
 var app = builder.Build();
 
-app.UseCors("AllowAngular");
 
+app.UseCors("AllowAngular");
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-
-
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        await DbInitializer.SeedRolesAsync(services);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
-    }
-}
 
 app.Run();
