@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TriageSystem.API.Data;
 using TriageSystem.API.Entities;
+using TriageSystem.API.Interfaces;
+using TriageSystem.API.Repositories;
+using TriageSystem.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +26,10 @@ builder.Services.AddIdentity<AppUser, AppRole>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IPatientRepository, PatientRepository>();
+
+builder.Services.AddScoped<ITriageEngineService, TriageEngineService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
