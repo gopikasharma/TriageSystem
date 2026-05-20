@@ -10,8 +10,6 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
-
-    // 1. Clinical Domain DbSets (Initialized to satisfy C# nullable rules)
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<SymptomReport> SymptomReports => Set<SymptomReport>();
     public DbSet<PriorityAssessment> PriorityAssessments => Set<PriorityAssessment>();
@@ -20,19 +18,16 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     
     public DbSet<ConsultationRecord> Consultations => Set<ConsultationRecord>(); 
 
-    // 2. The Fluent API
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder); 
 
-        // RULE 1: Enforce the strict 1-to-1 relationship for the AI Engine
         builder.Entity<SymptomReport>()
             .HasOne(s => s.Assessment)
             .WithOne(a => a.SymptomReport)
             .HasForeignKey<PriorityAssessment>(a => a.SymptomReportId)
             .OnDelete(DeleteBehavior.Restrict); 
 
-        // RULE 2: Prevent "Multiple Cascade Paths" errors
         builder.Entity<Appointment>()
             .HasOne(a => a.Patient)
             .WithMany(p => p.Appointments)
@@ -44,7 +39,12 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             .WithMany()
             .HasForeignKey(a => a.DoctorId)
             .OnDelete(DeleteBehavior.Restrict);
-            
+
+        builder.Entity<PriorityAssessment>()
+            .HasOne(p => p.ValidatedByNurse)
+            .WithMany()
+            .HasForeignKey(p => p.ValidatedByNurseId)
+            .OnDelete(DeleteBehavior.Restrict); 
     }
 
     public override int SaveChanges()

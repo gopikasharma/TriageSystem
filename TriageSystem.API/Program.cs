@@ -28,8 +28,10 @@ builder.Services.AddIdentity<AppUser, AppRole>(options =>
 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IPatientRepository, PatientRepository>();
-
 builder.Services.AddScoped<ITriageEngineService, TriageEngineService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

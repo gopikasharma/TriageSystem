@@ -1,0 +1,35 @@
+<div class="booking-container">
+  <div class="green-card">
+    <h2 class="title">Book Your Medical Appointment</h2>
+    
+    <div class="input-group">
+      <label>Full Name</label>
+      <input type="text" [(ngModel)]="appointmentData.patientName" placeholder="Enter patient name">
+    </div>
+
+    <div class="input-group">
+      <label>Reason for Visit (Chief Complaint)</label>
+      <textarea [(ngModel)]="appointmentData.chiefComplaint" placeholder="Describe your symptoms..."></textarea>
+    </div>
+
+    <div class="input-group">
+      <label>Pain Level: {{appointmentData.painLevel}}</label>
+      <input type="range" min="0" max="10" [(ngModel)]="appointmentData.painLevel">
+    </div>
+
+    <button type="button" class="btn-triage" (click)="runAiTriage()" [disabled]="isLoading()">
+      {{ isLoading() ? 'AI is Analyzing...' : 'Check Priority with AI' }}
+    </button>
+
+    <div class="ai-banner" *ngIf="aiResult()" [ngClass]="aiResult().suggestedPriority.toLowerCase()">
+      <strong>AI Assessment:</strong> {{ aiResult().suggestedPriority }} (Score: {{ aiResult().aiScore }})
+    </div>
+
+    <div class="input-group" style="margin-top: 20px;">
+      <label>Preferred Date</label>
+      <input type="date" [(ngModel)]="appointmentData.appointmentDate">
+    </div>
+
+    <button class="btn-book">Confirm Appointment</button>
+  </div>
+</div>

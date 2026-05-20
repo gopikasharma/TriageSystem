@@ -1,6 +1,9 @@
+using TriageSystem.API.Interfaces;
+
 namespace TriageSystem.API.Entities;
 
-public class SymptomReport : BaseEntity
+
+public class SymptomReport : BaseEntity, IAuditable 
 {
     public Guid PatientId { get; set; }
     public Patient Patient { get; set; } = null!;
@@ -12,5 +15,6 @@ public class SymptomReport : BaseEntity
     public int DurationInDays { get; set; }
 
     public PriorityAssessment? Assessment { get; set; }
-   
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
 }

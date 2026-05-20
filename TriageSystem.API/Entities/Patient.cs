@@ -1,8 +1,12 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using TriageSystem.API.Interfaces;
+
 namespace TriageSystem.API.Entities;
 
-public class Patient : BaseEntity
+public class Patient : BaseEntity,IAuditable
 {
     public Guid UserId { get; set; }
+    [ForeignKey("UserId")]
     public AppUser User { get; set; } = null!;
 
     public DateTime DateOfBirth { get; set; }

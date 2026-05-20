@@ -1,8 +1,9 @@
+using TriageSystem.API.Interfaces;
 using TriageSystem.API.Shared;
 
 namespace TriageSystem.API.Entities;
 
-public class PriorityAssessment : BaseEntity
+public class PriorityAssessment : BaseEntity,IAuditable
 {
     public Guid SymptomReportId { get; set; }
     public SymptomReport SymptomReport { get; set; } = null!;
@@ -18,4 +19,6 @@ public class PriorityAssessment : BaseEntity
     
     public PriorityLevel FinalPriority { get; set; } 
     public string? ValidationNotes { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? UpdatedAt { get; set; }
 }
